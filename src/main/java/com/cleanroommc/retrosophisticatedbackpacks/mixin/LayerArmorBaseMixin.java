@@ -38,6 +38,7 @@ public abstract class LayerArmorBaseMixin<T extends ModelBase> implements LayerR
     protected abstract void setModelSlotVisible(T p_188359_1_, EntityEquipmentSlot slotIn);
 
     @Inject(method = "renderArmorLayer", at = @At(value = "TAIL"))
+    @SuppressWarnings("unchecked")
     private void injectRenderArmorLayer(EntityLivingBase entityLivingBaseIn,
                                         float limbSwing,
                                         float limbSwingAmount,
@@ -59,7 +60,6 @@ public abstract class LayerArmorBaseMixin<T extends ModelBase> implements LayerR
 
             T t = thisObject.getModelFromSlot(slotIn);
             t = getArmorModelHook(entityLivingBaseIn, itemStack, slotIn, t);
-            System.out.println("KEK");
             t.setModelAttributes(renderer.getMainModel());
             t.setLivingAnimations(entityLivingBaseIn, limbSwing, limbSwingAmount, partialTicks);
             setModelSlotVisible(t, slotIn);
