@@ -149,7 +149,7 @@ dependencies {
         exclude("net.minecraftforge")
     }
 
-    implementation("com.cleanroommc:modularui:3.1.2")
+    implementation("com.cleanroommc:modularui:3.1.6")
     compileOnlyApi(rfg.deobf("curse.maven:neverenoughanimation-1062347:6533650-sources-6533651"))
     runtimeOnly(rfg.deobf("curse.maven:inventory-bogosorter-632327:7412409-sources-7412411"))
     implementation(rfg.deobf("curse.maven:baubles-227083:2518667"))
