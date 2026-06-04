@@ -1,4 +1,3 @@
-
 import org.jetbrains.gradle.ext.Gradle
 import org.jetbrains.gradle.ext.compiler
 import org.jetbrains.gradle.ext.runConfigurations
@@ -138,6 +137,10 @@ repositories {
         name = "BlameJared Maven"
         url = uri("https://maven.blamejared.com")
     }
+    maven {
+        name = "RyanLiptak Maven"
+        url = uri("https://www.ryanliptak.com/maven/")
+    }
     mavenLocal() // Must be last for caching to work
 }
 
@@ -150,6 +153,7 @@ dependencies {
     compileOnlyApi(rfg.deobf("curse.maven:neverenoughanimation-1062347:6533650-sources-6533651"))
     runtimeOnly(rfg.deobf("curse.maven:inventory-bogosorter-632327:7412409-sources-7412411"))
     implementation(rfg.deobf("curse.maven:baubles-227083:2518667"))
+    compileOnlyApi(rfg.deobf("applecore:AppleCore:1.12.2-3.4.0+356.64453:api"))
     compileOnly(rfg.deobf("curse.maven:fluidlogged-api-485654:3697254")) // Oldest supported version (v1.7)
     
     if (use_assetmover.toBoolean()) {

@@ -10,7 +10,9 @@ import net.minecraft.item.ItemStack
 import net.minecraft.nbt.NBTTagCompound
 import net.minecraft.util.EnumFacing
 import net.minecraftforge.common.capabilities.Capability
+import net.minecraftforge.fml.common.Loader
 import net.minecraftforge.items.IItemHandler
+import squeek.applecore.api.AppleCoreAPI
 
 class AdvancedFeedingUpgradeWrapper : AdvancedUpgradeWrapper<FeedingUpgradeItem>(), IFeedingUpgrade {
     companion object {
@@ -22,13 +24,13 @@ class AdvancedFeedingUpgradeWrapper : AdvancedUpgradeWrapper<FeedingUpgradeItem>
 
     override val filterItems: ExposedItemStackHandler = object : ExposedItemStackHandler(16) {
         override fun isItemValid(slot: Int, stack: ItemStack): Boolean =
-            stack.item is ItemFood
+            IFeedingUpgrade.isValidFood(stack)
     }
     var hungerFeedingStrategy: FeedingStrategy.Hunger = FeedingStrategy.Hunger.HALF
-    var healthFeedingStrategy: FeedingStrategy.HEALTH = FeedingStrategy.HEALTH.IGNORE
+    var healthFeedingStrategy: FeedingStrategy.Health = FeedingStrategy.Health.IGNORE
 
     override fun checkFilter(stack: ItemStack): Boolean =
-        stack.item is ItemFood && super.checkFilter(stack)
+        IFeedingUpgrade.isValidFood(stack) && super.checkFilter(stack)
 
     override fun getFoodSlot(handler: IItemHandler, foodLevel: Int, health: Float, maxHealth: Float): Int {
         for (slot in 0 until handler.slots) {
@@ -36,16 +38,24 @@ class AdvancedFeedingUpgradeWrapper : AdvancedUpgradeWrapper<FeedingUpgradeItem>
 
             if (!checkFilter(stack))
                 continue
+            
+            val hunger: Int
+            if (Loader.isModLoaded("applecore")) {
+                val foodValues = AppleCoreAPI.accessor.getFoodValues(stack)
 
-            val item = stack.item as? ItemFood ?: continue
-            val healingAmount = item.getHealAmount(stack)
+                hunger = foodValues.hunger
+            } else {
+                val item = stack.item as? ItemFood ?: continue
 
-            if (maxHealth > health && healthFeedingStrategy == FeedingStrategy.HEALTH.ALWAYS)
+                hunger = item.getHealAmount(stack)
+            }
+
+            if (maxHealth > health && healthFeedingStrategy == FeedingStrategy.Health.ALWAYS)
                 return slot
 
             val flag = when (hungerFeedingStrategy) {
-                FeedingStrategy.Hunger.FULL -> healingAmount <= 20 - foodLevel
-                FeedingStrategy.Hunger.HALF -> healingAmount / 2 <= 20 - foodLevel
+                FeedingStrategy.Hunger.FULL -> hunger <= 20 - foodLevel
+                FeedingStrategy.Hunger.HALF -> hunger / 2 <= 20 - foodLevel
                 FeedingStrategy.Hunger.ALWAYS -> foodLevel < 20
             }
 
@@ -71,7 +81,7 @@ class AdvancedFeedingUpgradeWrapper : AdvancedUpgradeWrapper<FeedingUpgradeItem>
     override fun deserializeNBT(nbt: NBTTagCompound) {
         super.deserializeNBT(nbt)
         hungerFeedingStrategy = FeedingStrategy.Hunger.entries[nbt.getByte(HUNGER_FEEDING_STRATEGY_TAG).toInt()]
-        healthFeedingStrategy = FeedingStrategy.HEALTH.entries[nbt.getByte(HURT_FEEDING_STRATEGY_TAG).toInt()]
+        healthFeedingStrategy = FeedingStrategy.Health.entries[nbt.getByte(HURT_FEEDING_STRATEGY_TAG).toInt()]
         BackpackDataFixer.fixFeedingUpgrade(filterItems)
     }
 
@@ -82,7 +92,7 @@ class AdvancedFeedingUpgradeWrapper : AdvancedUpgradeWrapper<FeedingUpgradeItem>
             ALWAYS;
         }
 
-        enum class HEALTH {
+        enum class Health {
             ALWAYS,
             IGNORE;
         }

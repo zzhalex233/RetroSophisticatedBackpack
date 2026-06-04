@@ -3,13 +3,23 @@ package com.cleanroommc.retrosophisticatedbackpacks.capability.upgrade
 import com.cleanroommc.retrosophisticatedbackpacks.capability.Capabilities
 import com.cleanroommc.retrosophisticatedbackpacks.capability.ISidelessCapabilityProvider
 import net.minecraft.entity.player.EntityPlayer
+import net.minecraft.item.ItemFood
+import net.minecraft.item.ItemStack
 import net.minecraft.nbt.NBTTagCompound
 import net.minecraft.util.EnumFacing
 import net.minecraftforge.common.capabilities.Capability
 import net.minecraftforge.common.util.INBTSerializable
+import net.minecraftforge.fml.common.Loader
 import net.minecraftforge.items.IItemHandler
+import squeek.applecore.api.AppleCoreAPI
 
 sealed interface IFeedingUpgrade : ISidelessCapabilityProvider, INBTSerializable<NBTTagCompound> {
+
+    companion object {
+        fun isValidFood(stack: ItemStack): Boolean =
+            if (Loader.isModLoaded("applecore")) AppleCoreAPI.accessor.isFood(stack)
+            else stack.item is ItemFood
+    }
 
     /**
      * Returns the first available food that matches the upgrade's criteria

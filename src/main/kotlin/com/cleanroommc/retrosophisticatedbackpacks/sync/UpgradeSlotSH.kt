@@ -78,7 +78,7 @@ class UpgradeSlotSH(slot: ModularSlot) : ItemSlotSH(slot) {
         wrapper.hungerFeedingStrategy =
             buf.readEnumValue(AdvancedFeedingUpgradeWrapper.FeedingStrategy.Hunger::class.java)
         wrapper.healthFeedingStrategy =
-            buf.readEnumValue(AdvancedFeedingUpgradeWrapper.FeedingStrategy.HEALTH::class.java)
+            buf.readEnumValue(AdvancedFeedingUpgradeWrapper.FeedingStrategy.Health::class.java)
     }
 
     private fun updateFilterUpgrade(buf: PacketBuffer) {

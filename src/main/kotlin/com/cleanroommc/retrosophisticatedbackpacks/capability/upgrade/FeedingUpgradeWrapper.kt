@@ -10,18 +10,20 @@ import net.minecraft.item.ItemStack
 import net.minecraft.nbt.NBTTagCompound
 import net.minecraft.util.EnumFacing
 import net.minecraftforge.common.capabilities.Capability
+import net.minecraftforge.fml.common.Loader
 import net.minecraftforge.items.IItemHandler
+import squeek.applecore.api.AppleCoreAPI
 
 class FeedingUpgradeWrapper : BasicUpgradeWrapper<FeedingUpgradeItem>(), IFeedingUpgrade {
     override val settingsLangKey: String = "gui.feeding_settings".asTranslationKey()
 
     override val filterItems: ExposedItemStackHandler = object : ExposedItemStackHandler(9) {
         override fun isItemValid(slot: Int, stack: ItemStack): Boolean =
-            stack.item is ItemFood
+            IFeedingUpgrade.isValidFood(stack)
     }
 
     override fun checkFilter(stack: ItemStack): Boolean =
-        stack.item is ItemFood && super.checkFilter(stack)
+        IFeedingUpgrade.isValidFood(stack) && super.checkFilter(stack)
 
     override fun getFoodSlot(handler: IItemHandler, foodLevel: Int, health: Float, maxHealth: Float): Int {
         for (slot in 0 until handler.slots) {
@@ -29,11 +31,19 @@ class FeedingUpgradeWrapper : BasicUpgradeWrapper<FeedingUpgradeItem>(), IFeedin
 
             if (!checkFilter(stack))
                 continue
-
-            val item = stack.item as? ItemFood ?: continue
-            val healingAmount = item.getHealAmount(stack)
-
-            if (healingAmount <= 20 - foodLevel)
+            
+            val hunger: Int
+            if (Loader.isModLoaded("applecore")) {
+                val foodValues = AppleCoreAPI.accessor.getFoodValues(stack)
+                
+                hunger = foodValues.hunger
+            } else {
+                val item = stack.item as? ItemFood ?: continue
+                
+                hunger = item.getHealAmount(stack)
+            }
+            
+            if (hunger <= 20 - foodLevel)
                 return slot
         }
 
