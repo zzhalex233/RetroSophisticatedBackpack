@@ -8,6 +8,7 @@ import com.cleanroommc.retrosophisticatedbackpacks.tileentity.BackpackTileEntity
 import com.cleanroommc.retrosophisticatedbackpacks.util.IModelRegister
 import com.cleanroommc.retrosophisticatedbackpacks.util.Utils.asTranslationKey
 import git.jbredwards.fluidlogged_api.api.block.IFluidloggable
+import git.jbredwards.fluidlogged_api.mod.Main.wrapper
 import net.minecraft.block.Block
 import net.minecraft.block.ITileEntityProvider
 import net.minecraft.block.SoundType
@@ -178,6 +179,9 @@ class BackpackBlock(
         val tileEntity = worldIn.getTileEntity(pos) as? BackpackTileEntity ?: return
 
         tileEntity.wrapper.deserializeNBT(backpackInventory.serializeNBT())
+        
+        if (stack.hasDisplayName())
+            tileEntity.wrapper.customName = stack.displayName
     }
 
     override fun onBlockActivated(
@@ -239,8 +243,14 @@ class BackpackBlock(
         val tileEntityBackpackInventory = tileEntity.getCapability(Capabilities.BACKPACK_CAPABILITY, null) ?: return
         val stackBackpackInventory = stack.getCapability(Capabilities.BACKPACK_CAPABILITY, null) ?: return
         stackBackpackInventory.deserializeNBT(tileEntityBackpackInventory.serializeNBT())
+        stack.setStackDisplayName(tileEntity.name)
 
         drops.add(stack)
+    }
+
+    override fun breakBlock(worldIn: World, pos: BlockPos, state: IBlockState) {
+        worldIn.updateComparatorOutputLevel(pos, state.block)
+        super.breakBlock(worldIn, pos, state)
     }
 
     override fun removedByPlayer(

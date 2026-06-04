@@ -14,14 +14,18 @@ import com.cleanroommc.retrosophisticatedbackpacks.common.gui.BackpackGuiHolder
 import com.cleanroommc.retrosophisticatedbackpacks.util.Utils.asTranslationKey
 import net.minecraft.block.state.IBlockState
 import net.minecraft.entity.player.EntityPlayer
+import net.minecraft.entity.player.InventoryPlayer
+import net.minecraft.inventory.Container
 import net.minecraft.item.ItemStack
 import net.minecraft.nbt.NBTTagCompound
 import net.minecraft.network.NetworkManager
 import net.minecraft.network.play.server.SPacketUpdateTileEntity
-import net.minecraft.tileentity.TileEntity
+import net.minecraft.tileentity.TileEntityLockableLoot
 import net.minecraft.util.EnumFacing
+import net.minecraft.util.NonNullList
 import net.minecraft.util.math.BlockPos
 import net.minecraft.util.text.ITextComponent
+import net.minecraft.util.text.TextComponentString
 import net.minecraft.util.text.TextComponentTranslation
 import net.minecraft.world.World
 import net.minecraftforge.common.capabilities.Capability
@@ -29,7 +33,7 @@ import net.minecraftforge.items.CapabilityItemHandler
 import net.minecraftforge.items.IItemHandler
 
 class BackpackTileEntity(val wrapper: BackpackWrapper = BackpackWrapper()) :
-    TileEntity(),
+    TileEntityLockableLoot(),
     IItemHandler,
     IGuiHolder<PosGuiData> {
     companion object {
@@ -56,9 +60,11 @@ class BackpackTileEntity(val wrapper: BackpackWrapper = BackpackWrapper()) :
 
     @Suppress("UNCHECKED_CAST")
     override fun <T> getCapability(capability: Capability<T>, facing: EnumFacing?): T? =
-        if (capability == Capabilities.BACKPACK_CAPABILITY) wrapper as T
-        else if (capability == CapabilityItemHandler.ITEM_HANDLER_CAPABILITY) this as T
-        else null
+        when (capability) {
+            Capabilities.BACKPACK_CAPABILITY -> wrapper as T
+            CapabilityItemHandler.ITEM_HANDLER_CAPABILITY -> this as T
+            else -> null
+        }
 
     override fun hasCapability(capability: Capability<*>, facing: EnumFacing?): Boolean =
         wrapper.hasCapability(capability, facing)
@@ -89,14 +95,33 @@ class BackpackTileEntity(val wrapper: BackpackWrapper = BackpackWrapper()) :
         return holder.buildUI(data, syncManager, uiSettings)
     }
 
+    override fun hasCustomName(): Boolean =
+        wrapper.customName != null
+
+    override fun getName(): String =
+        if (hasCustomName()) wrapper.customName!! else "container.backpack"
+
     override fun getDisplayName(): ITextComponent =
-        TextComponentTranslation("container.backpack".asTranslationKey())
+        if (hasCustomName()) TextComponentString(name)
+        else TextComponentTranslation("container.backpack".asTranslationKey())
 
     override fun getSlots(): Int =
         wrapper.slots
 
+    override fun getSizeInventory(): Int =
+        wrapper.backpackInventorySize()
+
+    override fun isEmpty(): Boolean =
+        wrapper.backpackItemStackHandler.inventory.all(ItemStack::isEmpty)
+
     override fun getStackInSlot(slot: Int): ItemStack =
         wrapper.getStackInSlot(slot)
+
+    override fun getInventoryStackLimit(): Int =
+        wrapper.getTotalStackMultiplier() * 64
+
+    override fun getItems(): NonNullList<ItemStack> =
+        wrapper.backpackItemStackHandler.inventory
 
     override fun insertItem(
         slot: Int,
@@ -116,4 +141,15 @@ class BackpackTileEntity(val wrapper: BackpackWrapper = BackpackWrapper()) :
 
     override fun getSlotLimit(slot: Int): Int =
         wrapper.getSlotLimit(slot)
+
+    override fun createContainer(
+        playerInventory: InventoryPlayer,
+        playerIn: EntityPlayer
+    ): Container {
+        throw UnsupportedOperationException("Backpack tile entities do not have a vanilla GUI, if you're attempting to open a GUI, use BackpackTileEntity.openGui(EntityPlayer) instead")
+    }
+
+    override fun getGuiID(): String {
+        throw UnsupportedOperationException("Backpack tile entities do not have a vanilla GUI, if you're attempting to open a GUI, use BackpackTileEntity.openGui(EntityPlayer) instead")
+    }
 }

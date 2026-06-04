@@ -14,6 +14,7 @@ import net.minecraft.item.ItemStack
 import net.minecraft.nbt.NBTTagCompound
 import net.minecraft.util.EnumFacing
 import net.minecraft.util.text.ITextComponent
+import net.minecraft.util.text.TextComponentString
 import net.minecraft.util.text.TextComponentTranslation
 import net.minecraftforge.common.capabilities.Capability
 import net.minecraftforge.common.util.INBTSerializable
@@ -35,6 +36,8 @@ class BackpackWrapper(
         private const val MAIN_COLOR_TAG = "MainColor"
         private const val ACCENT_COLOR_TAG = "AccentColor"
         
+        private const val CUSTOM_NAME_TAG = "CustomName"
+        
         private const val MEMORY_STACK_ITEMS_TAG = "MemoryItems"
         private const val MEMORY_STACK_RESPECT_NBT_TAG = "MemoryRespectNBT"
         private const val SORT_TYPE_TAG = "SortType"
@@ -53,6 +56,7 @@ class BackpackWrapper(
 
     var mainColor = DEFAULT_MAIN_COLOR
     var accentColor = DEFAULT_ACCENT_COLOR
+    var customName: String? = null
 
     fun isStackedByMultiplication(): Boolean =
         upgradeItemStackHandler.inventory.map(ItemStack::getItem).filterIsInstance<ExponentialStackUpgradeItem>().any()
@@ -223,16 +227,17 @@ class BackpackWrapper(
     // This is only meant to used for bogosorter as RSB already implemented a sorting mechanism
     fun getSortableSlotIndexes(): List<Int> =
         (0..<backpackInventorySize()).filter { !backpackItemStackHandler.sortLockedSlots[it] && backpackItemStackHandler.memorizedSlotStack[it].isEmpty }
-
-    // Overrides
-
+    
     fun getDisplayName(): ITextComponent =
-        TextComponentTranslation("container.backpack".asTranslationKey())
+        if (customName != null) TextComponentString(customName!!)
+        else TextComponentTranslation("container.backpack".asTranslationKey())
 
     private fun <T> gatherCapabilityUpgrades(capability: Capability<T>): List<T> =
         upgradeItemStackHandler.inventory
             .mapNotNull { it.getCapability(capability, null) }
 
+    // Overrides
+    
     override fun getSlots(): Int =
         backpackItemStackHandler.slots
 
@@ -265,6 +270,8 @@ class BackpackWrapper(
         
         nbt.setInteger(MAIN_COLOR_TAG, mainColor)
         nbt.setInteger(ACCENT_COLOR_TAG, accentColor)
+        
+        customName?.let { nbt.setString(CUSTOM_NAME_TAG, it) }
 
         // Settings
         val memoryNbt = NBTTagCompound()
@@ -298,6 +305,9 @@ class BackpackWrapper(
         
         mainColor = nbt.getInteger(MAIN_COLOR_TAG)
         accentColor = nbt.getInteger(ACCENT_COLOR_TAG)
+        
+        if (nbt.hasKey(CUSTOM_NAME_TAG))
+            customName = nbt.getString(CUSTOM_NAME_TAG)
 
         if (nbt.hasKey(BACKPACK_INVENTORY_TAG))
             BackpackItemStackHelper.loadAllItemsExtended(
