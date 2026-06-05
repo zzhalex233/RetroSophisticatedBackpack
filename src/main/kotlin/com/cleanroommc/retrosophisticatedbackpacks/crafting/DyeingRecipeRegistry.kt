@@ -11,8 +11,25 @@ import net.minecraft.util.ResourceLocation
 import net.minecraftforge.common.crafting.CraftingHelper
 
 object DyeingRecipeRegistry {
-    private val DYES: Array<String> = arrayOf("Black", "Red", "Green", "Brown", "Blue", "Purple", "Cyan", "LightGray", "Gray", "Pink", "Lime", "Yellow", "LightBlue", "Magenta", "Orange", "White")
-    
+    private val DYES: Array<String> = arrayOf(
+        "Black",
+        "Red",
+        "Green",
+        "Brown",
+        "Blue",
+        "Purple",
+        "Cyan",
+        "LightGray",
+        "Gray",
+        "Pink",
+        "Lime",
+        "Yellow",
+        "LightBlue",
+        "Magenta",
+        "Orange",
+        "White"
+    )
+
     fun constructRecipe(
         backpackItem: BackpackItem,
         mainColor: EnumDyeColor?,
