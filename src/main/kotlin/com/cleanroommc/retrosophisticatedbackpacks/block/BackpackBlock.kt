@@ -8,7 +8,6 @@ import com.cleanroommc.retrosophisticatedbackpacks.tileentity.BackpackTileEntity
 import com.cleanroommc.retrosophisticatedbackpacks.util.IModelRegister
 import com.cleanroommc.retrosophisticatedbackpacks.util.Utils.asTranslationKey
 import git.jbredwards.fluidlogged_api.api.block.IFluidloggable
-import git.jbredwards.fluidlogged_api.mod.Main.wrapper
 import net.minecraft.block.Block
 import net.minecraft.block.ITileEntityProvider
 import net.minecraft.block.SoundType
@@ -179,7 +178,7 @@ class BackpackBlock(
         val tileEntity = worldIn.getTileEntity(pos) as? BackpackTileEntity ?: return
 
         tileEntity.wrapper.deserializeNBT(backpackInventory.serializeNBT())
-        
+
         if (stack.hasDisplayName())
             tileEntity.wrapper.customName = stack.displayName
     }

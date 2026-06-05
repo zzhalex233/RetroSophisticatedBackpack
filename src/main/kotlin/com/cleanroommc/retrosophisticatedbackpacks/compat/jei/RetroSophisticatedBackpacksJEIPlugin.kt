@@ -1,14 +1,8 @@
 package com.cleanroommc.retrosophisticatedbackpacks.compat.jei
 
-import com.cleanroommc.retrosophisticatedbackpacks.capability.Capabilities
 import com.cleanroommc.retrosophisticatedbackpacks.common.gui.BackpackCraftingTransferInfo
-import com.cleanroommc.retrosophisticatedbackpacks.crafting.DyeingRecipeRegistry
 import com.cleanroommc.retrosophisticatedbackpacks.item.Items
 import mezz.jei.api.*
-import mezz.jei.api.ingredients.VanillaTypes
-import mezz.jei.api.recipe.transfer.IRecipeTransferRegistry
-import net.minecraft.item.EnumDyeColor
-import net.minecraft.item.ItemStack
 
 @JEIPlugin
 class RetroSophisticatedBackpacksJEIPlugin : IModPlugin {
