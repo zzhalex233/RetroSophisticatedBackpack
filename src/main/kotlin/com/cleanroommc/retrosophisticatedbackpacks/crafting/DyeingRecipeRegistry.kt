@@ -11,6 +11,8 @@ import net.minecraft.util.ResourceLocation
 import net.minecraftforge.common.crafting.CraftingHelper
 
 object DyeingRecipeRegistry {
+    private val DYES: Array<String> = arrayOf("Black", "Red", "Green", "Brown", "Blue", "Purple", "Cyan", "LightGray", "Gray", "Pink", "Lime", "Yellow", "LightBlue", "Magenta", "Orange", "White")
+    
     fun constructRecipe(
         backpackItem: BackpackItem,
         mainColor: EnumDyeColor?,
@@ -40,9 +42,9 @@ object DyeingRecipeRegistry {
                 'B',
                 ItemStack(backpackItem, 1),
                 'D',
-                ItemStack(net.minecraft.init.Items.DYE, 1, mainColor.dyeDamage),
+                "dye${DYES[mainColor.dyeDamage]}",
                 'R',
-                ItemStack(net.minecraft.init.Items.DYE, 1, accentColor.dyeDamage)
+                "dye${DYES[accentColor.dyeDamage]}",
             )
         } else if (mainColor != null) {
             constructRecipe(
@@ -54,7 +56,7 @@ object DyeingRecipeRegistry {
                 'B',
                 ItemStack(backpackItem, 1),
                 'D',
-                ItemStack(net.minecraft.init.Items.DYE, 1, mainColor.dyeDamage)
+                "dye${DYES[mainColor.dyeDamage]}",
             )
         } else if (accentColor != null) {
             constructRecipe(
@@ -66,7 +68,7 @@ object DyeingRecipeRegistry {
                 'B',
                 ItemStack(backpackItem, 1),
                 'D',
-                ItemStack(net.minecraft.init.Items.DYE, 1, accentColor.dyeDamage)
+                "dye${DYES[accentColor.dyeDamage]}",
             )
         } else null
     }

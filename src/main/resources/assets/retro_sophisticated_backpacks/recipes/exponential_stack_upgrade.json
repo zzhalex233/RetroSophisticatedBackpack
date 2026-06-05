@@ -2,7 +2,8 @@
   "type": "minecraft:crafting_shaped",
   "key": {
     "N": {
-      "item": "minecraft:nether_star"
+      "type": "forge:ore_dict",
+      "ore": "netherStar"
     },
     "B": {
       "item": "retro_sophisticated_backpacks:upgrade_base"
@@ -14,7 +15,8 @@
       "item": "minecraft:end_crystal"
     },
     "E": {
-      "item": "minecraft:emerald_block"
+      "type": "forge:ore_dict",
+      "ore": "blockEmerald"
     }
   },
   "pattern": [

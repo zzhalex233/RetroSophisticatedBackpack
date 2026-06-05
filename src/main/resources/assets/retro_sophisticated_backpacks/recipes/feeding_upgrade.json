@@ -12,7 +12,8 @@
       "item": "minecraft:speckled_melon"
     },
     "E": {
-      "item": "minecraft:ender_pearl"
+      "type": "forge:ore_dict",
+      "ore": "enderpearl"
     },
     "B": {
       "item": "retro_sophisticated_backpacks:upgrade_base"
