@@ -1,9 +1,11 @@
 package com.cleanroommc.retrosophisticatedbackpacks.capability.upgrade
 
+import com.cleanroommc.retrosophisticatedbackpacks.RetroSophisticatedBackpacks
 import com.cleanroommc.retrosophisticatedbackpacks.backpack.BackpackDataFixer
 import com.cleanroommc.retrosophisticatedbackpacks.capability.Capabilities
 import com.cleanroommc.retrosophisticatedbackpacks.inventory.ExposedItemStackHandler
 import com.cleanroommc.retrosophisticatedbackpacks.item.FeedingUpgradeItem
+import com.cleanroommc.retrosophisticatedbackpacks.util.BackpackItemStackHelper
 import com.cleanroommc.retrosophisticatedbackpacks.util.Utils.asTranslationKey
 import net.minecraft.item.ItemFood
 import net.minecraft.item.ItemStack
@@ -34,21 +36,7 @@ class AdvancedFeedingUpgradeWrapper : AdvancedUpgradeWrapper<FeedingUpgradeItem>
 
     override fun getFoodSlot(handler: IItemHandler, foodLevel: Int, health: Float, maxHealth: Float): Int {
         for (slot in 0 until handler.slots) {
-            val stack = handler.getStackInSlot(slot)
-
-            if (!checkFilter(stack))
-                continue
-            
-            val hunger: Int
-            if (Loader.isModLoaded("applecore")) {
-                val foodValues = AppleCoreAPI.accessor.getFoodValues(stack)
-
-                hunger = foodValues.hunger
-            } else {
-                val item = stack.item as? ItemFood ?: continue
-
-                hunger = item.getHealAmount(stack)
-            }
+            val hunger = BackpackItemStackHelper.getHungerFromSlot(handler, slot, ::checkFilter) ?: continue
 
             if (maxHealth > health && healthFeedingStrategy == FeedingStrategy.Health.ALWAYS)
                 return slot

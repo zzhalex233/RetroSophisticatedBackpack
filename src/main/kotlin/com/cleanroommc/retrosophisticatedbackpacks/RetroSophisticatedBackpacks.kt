@@ -43,6 +43,8 @@ object RetroSophisticatedBackpacks {
 
     var baublesLoaded = false
         private set
+    var appleCoreLoaded = false
+        private set
 
     val CREATIVE_TAB = object : CreativeTabs("creative_tab".asTranslationKey()) {
         override fun createIcon(): ItemStack =
@@ -54,6 +56,7 @@ object RetroSophisticatedBackpacks {
         CapabilityHandler.register()
 
         baublesLoaded = Loader.isModLoaded("baubles")
+        appleCoreLoaded = Loader.isModLoaded("applecore")
 
         proxy.preInit(event)
         
