@@ -48,9 +48,11 @@ class BasicFilterWidget(
         slotGroup.disableSortButtons()
         filterSlots = mutableListOf<PhantomItemSlot>()
 
-        for (i in 0 until 9) {
+        val filterSlotCount = filterableWrapper.filterItems.slots
+        val slotsInRow = minOf(3, filterSlotCount)
+        for (i in 0 until filterSlotCount) {
             val slot =
-                PhantomItemSlot().syncHandler("${syncKey}_$slotIndex", i).pos(i % 3 * 18, i / 3 * 18) as PhantomItemSlot
+                PhantomItemSlot().syncHandler("${syncKey}_$slotIndex", i).pos(i % slotsInRow * 18, i / slotsInRow * 18) as PhantomItemSlot
 
             filterSlots.add(slot)
             slotGroup.child(slot)

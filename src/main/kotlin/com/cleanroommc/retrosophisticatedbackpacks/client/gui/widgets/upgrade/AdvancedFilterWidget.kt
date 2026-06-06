@@ -214,9 +214,11 @@ class AdvancedFilterWidget(
         slotGroup.disableSortButtons()
         filterSlots = mutableListOf<PhantomItemSlot>()
 
-        for (i in 0 until 16) {
+        val filterSlotCount = filterableWrapper.filterItems.slots
+        val slotsInRow = minOf(4, filterSlotCount)
+        for (i in 0 until filterSlotCount) {
             val slot =
-                PhantomItemSlot().syncHandler("${syncKey}_$slotIndex", i).pos(i % 4 * 18, i / 4 * 18) as PhantomItemSlot
+                PhantomItemSlot().syncHandler("${syncKey}_$slotIndex", i).pos(i % slotsInRow * 18, i / slotsInRow * 18) as PhantomItemSlot
 
             filterSlots.add(slot)
             slotGroup.child(slot)

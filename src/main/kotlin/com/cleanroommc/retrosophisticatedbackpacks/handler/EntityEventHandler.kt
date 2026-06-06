@@ -5,14 +5,24 @@ import com.cleanroommc.retrosophisticatedbackpacks.RetroSophisticatedBackpacks
 import com.cleanroommc.retrosophisticatedbackpacks.Tags
 import com.cleanroommc.retrosophisticatedbackpacks.backpack.BackpackInventoryHelper
 import com.cleanroommc.retrosophisticatedbackpacks.capability.Capabilities
+import com.cleanroommc.retrosophisticatedbackpacks.capability.BackpackWrapper
+import com.cleanroommc.retrosophisticatedbackpacks.capability.upgrade.EverlastingUpgradeWrapper
+import com.cleanroommc.retrosophisticatedbackpacks.capability.upgrade.IToolSwapperUpgrade
 import com.cleanroommc.retrosophisticatedbackpacks.item.BackpackItem
+import com.cleanroommc.retrosophisticatedbackpacks.mixin.EntityItemAccessor
+import net.minecraft.block.material.Material
 import net.minecraft.entity.item.EntityItem
 import net.minecraft.init.SoundEvents
 import net.minecraft.item.ItemStack
 import net.minecraft.util.EnumActionResult
 import net.minecraft.util.SoundCategory
+import net.minecraft.util.math.BlockPos
+import net.minecraftforge.event.entity.EntityJoinWorldEvent
+import net.minecraftforge.event.entity.item.ItemExpireEvent
 import net.minecraftforge.event.entity.player.EntityItemPickupEvent
+import net.minecraftforge.event.entity.player.AttackEntityEvent
 import net.minecraftforge.event.entity.player.PlayerInteractEvent
+import net.minecraftforge.event.world.ExplosionEvent
 import net.minecraftforge.fml.common.Mod
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent
 import net.minecraftforge.items.IItemHandler
@@ -73,18 +83,97 @@ object EntityEventHandler {
             if (!wrapper.canPickupItem(stack))
                 continue
 
-            var slotIndex = 0
-            while (!stack.isEmpty && slotIndex < wrapper.slots) {
-                stack = wrapper.backpackItemStackHandler.prioritizedInsertion(slotIndex, stack, false)
-
-                slotIndex++
-            }
+            stack = wrapper.insertStack(stack, false, true)
 
             if (stack.isEmpty)
                 break
         }
 
         return stack
+    }
+
+    @SubscribeEvent
+    @JvmStatic
+    fun onItemExpire(event: ItemExpireEvent) {
+        val stack = event.entityItem.item
+        val wrapper = stack.getCapability(Capabilities.BACKPACK_CAPABILITY, null) ?: return
+        if (wrapper.hasEverlastingUpgrade()) {
+            event.extraLife = Int.MAX_VALUE
+            event.isCanceled = true
+        }
+    }
+
+    @SubscribeEvent
+    @JvmStatic
+    fun onEntityJoinWorld(event: EntityJoinWorldEvent) {
+        val entity = event.entity as? EntityItem ?: return
+        if (entity.item.getCapability(Capabilities.BACKPACK_CAPABILITY, null)?.hasEverlastingUpgrade() == true) {
+            keepEverlastingItemAlive(entity)
+        }
+    }
+
+    @SubscribeEvent
+    @JvmStatic
+    fun onWorldTick(event: net.minecraftforge.fml.common.gameevent.TickEvent.WorldTickEvent) {
+        if (event.phase != net.minecraftforge.fml.common.gameevent.TickEvent.Phase.END || event.world.isRemote || event.world.totalWorldTime % 20L != 0L) {
+            return
+        }
+        event.world.loadedEntityList.asSequence()
+            .filterIsInstance<EntityItem>()
+            .filter { it.item.getCapability(Capabilities.BACKPACK_CAPABILITY, null)?.hasEverlastingUpgrade() == true }
+            .forEach { entity ->
+                keepEverlastingItemAlive(entity)
+                if (entity.posY < 0) {
+                    entity.setPosition(entity.posX, 1.0, entity.posZ)
+                    entity.motionY = 0.2
+                }
+                val material = entity.world.getBlockState(BlockPos(entity)).material
+                if (material == Material.WATER || material == Material.LAVA) {
+                    entity.motionY = 0.08
+                    entity.fallDistance = 0f
+                }
+            }
+        }
+
+    @SubscribeEvent
+    @JvmStatic
+    fun onExplosionDetonate(event: ExplosionEvent.Detonate) {
+        event.affectedBlocks.removeIf { pos ->
+            val tile = event.world.getTileEntity(pos) as? com.cleanroommc.retrosophisticatedbackpacks.tileentity.BackpackTileEntity
+            tile?.wrapper?.hasEverlastingUpgrade() == true
+        }
+        event.affectedEntities.removeIf { entity ->
+            entity is EntityItem && entity.item.getCapability(Capabilities.BACKPACK_CAPABILITY, null)?.hasEverlastingUpgrade() == true
+        }
+    }
+
+    @SubscribeEvent
+    @JvmStatic
+    fun onLeftClickBlock(event: PlayerInteractEvent.LeftClickBlock) {
+        if (event.world.isRemote) {
+            return
+        }
+        val state = event.world.getBlockState(event.pos)
+        if (forEachBackpack(event.entityPlayer) { wrapper ->
+                wrapper.gatherCapabilityUpgrades(Capabilities.ITOOL_SWAPPER_UPGRADE_CAPABILITY)
+                    .any { it.onBlockClick(event.entityPlayer, wrapper, event.pos, state) }
+            }) {
+            event.entityPlayer.inventoryContainer.detectAndSendChanges()
+        }
+    }
+
+    @SubscribeEvent
+    @JvmStatic
+    fun onAttackEntity(event: AttackEntityEvent) {
+        if (event.entityPlayer.world.isRemote) {
+            return
+        }
+        if (forEachBackpack(event.entityPlayer) { wrapper ->
+                wrapper.gatherCapabilityUpgrades(Capabilities.ITOOL_SWAPPER_UPGRADE_CAPABILITY)
+                    .any { it.onAttackEntity(event.entityPlayer, wrapper) }
+            }) {
+            event.entityPlayer.inventoryContainer.detectAndSendChanges()
+        }
     }
 
     @SubscribeEvent
@@ -117,5 +206,57 @@ object EntityEventHandler {
                 }
             }
         }
+
+        if (!player.world.isRemote && forEachBackpack(player) { wrapper ->
+                wrapper.gatherCapabilityUpgrades(Capabilities.ITOOL_SWAPPER_UPGRADE_CAPABILITY)
+                    .filterIsInstance<IToolSwapperUpgrade>()
+                    .any { it.onEntityInteract(player, wrapper, entity) }
+            }) {
+            player.inventoryContainer.detectAndSendChanges()
+        }
+    }
+
+    @SubscribeEvent
+    @JvmStatic
+    fun onRightClickBlock(event: PlayerInteractEvent.RightClickBlock) {
+        if (event.world.isRemote) {
+            return
+        }
+        val state = event.world.getBlockState(event.pos)
+        if (forEachBackpack(event.entityPlayer) { wrapper ->
+                wrapper.gatherCapabilityUpgrades(Capabilities.ITOOL_SWAPPER_UPGRADE_CAPABILITY)
+                    .filterIsInstance<IToolSwapperUpgrade>()
+                    .any { it.onBlockInteract(event.entityPlayer, wrapper, event.world, event.pos, state) }
+            }) {
+            event.entityPlayer.inventoryContainer.detectAndSendChanges()
+        }
+    }
+
+    private fun BackpackWrapper.hasEverlastingUpgrade(): Boolean =
+        gatherCapabilityUpgrades(Capabilities.EVERLASTING_UPGRADE_CAPABILITY)
+            .filterIsInstance<EverlastingUpgradeWrapper>()
+            .isNotEmpty()
+
+    private fun keepEverlastingItemAlive(entity: EntityItem) {
+        entity.lifespan = Int.MAX_VALUE
+        entity.setEntityInvulnerable(true)
+        (entity as EntityItemAccessor).`rsb$setAge`(0)
+    }
+
+    private fun forEachBackpack(player: net.minecraft.entity.player.EntityPlayer, action: (BackpackWrapper) -> Boolean): Boolean {
+        if (forEachBackpackIn(InvWrapper(player.inventory), action)) {
+            return true
+        }
+        return RetroSophisticatedBackpacks.baublesLoaded && forEachBackpackIn(BaublesApi.getBaublesHandler(player), action)
+    }
+
+    private fun forEachBackpackIn(inventory: IItemHandler, action: (BackpackWrapper) -> Boolean): Boolean {
+        for (slot in 0 until inventory.slots) {
+            val wrapper = inventory.getStackInSlot(slot).getCapability(Capabilities.BACKPACK_CAPABILITY, null) ?: continue
+            if (action(wrapper)) {
+                return true
+            }
+        }
+        return false
     }
 }

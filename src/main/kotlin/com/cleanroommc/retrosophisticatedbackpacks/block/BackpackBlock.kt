@@ -2,7 +2,10 @@ package com.cleanroommc.retrosophisticatedbackpacks.block
 
 import com.cleanroommc.retrosophisticatedbackpacks.RetroSophisticatedBackpacks
 import com.cleanroommc.retrosophisticatedbackpacks.backpack.BackpackTier
+import com.cleanroommc.retrosophisticatedbackpacks.capability.BackpackWrapper
 import com.cleanroommc.retrosophisticatedbackpacks.capability.Capabilities
+import com.cleanroommc.retrosophisticatedbackpacks.capability.upgrade.EverlastingUpgradeWrapper
+import com.cleanroommc.retrosophisticatedbackpacks.capability.upgrade.JukeboxUpgradeWrapper
 import com.cleanroommc.retrosophisticatedbackpacks.handler.RegistryHandler
 import com.cleanroommc.retrosophisticatedbackpacks.tileentity.BackpackTileEntity
 import com.cleanroommc.retrosophisticatedbackpacks.util.IModelRegister
@@ -178,6 +181,14 @@ class BackpackBlock(
         val tileEntity = worldIn.getTileEntity(pos) as? BackpackTileEntity ?: return
 
         tileEntity.wrapper.deserializeNBT(backpackInventory.serializeNBT())
+        val (leftTank, rightTank) = tileEntity.wrapper.tankRenderSides()
+        worldIn.setBlockState(
+            pos,
+            state.withProperty(LEFT_TANK, leftTank)
+                .withProperty(RIGHT_TANK, rightTank)
+                .withProperty(BATTERY, tileEntity.wrapper.hasBatteryUpgrade()),
+            3
+        )
     }
 
     override fun onBlockActivated(
@@ -193,6 +204,11 @@ class BackpackBlock(
     ): Boolean {
         if (!worldIn.isRemote) {
             if (playerIn.isSneaking) {
+                val tileEntity = worldIn.getTileEntity(pos) as? BackpackTileEntity
+                if (tileEntity?.wrapper?.hasEverlastingUpgrade() == true) {
+                    return true
+                }
+                tileEntity?.wrapper?.stopJukeboxUpgrades()
                 worldIn.playSound(playerIn, pos, SoundEvents.BLOCK_CLOTH_BREAK, SoundCategory.BLOCKS, 1f, 0.5f)
                 dropBlockAsItem(worldIn, pos, state, 0)
                 worldIn.setBlockState(pos, net.minecraft.init.Blocks.AIR.defaultState)
@@ -235,6 +251,9 @@ class BackpackBlock(
         fortune: Int
     ) {
         val tileEntity = world.getTileEntity(pos) as? BackpackTileEntity ?: return
+        if (tileEntity.wrapper.hasEverlastingUpgrade()) {
+            return
+        }
         val stack = ItemStack(Item.getItemFromBlock(this))
         val tileEntityBackpackInventory = tileEntity.getCapability(Capabilities.BACKPACK_CAPABILITY, null) ?: return
         val stackBackpackInventory = stack.getCapability(Capabilities.BACKPACK_CAPABILITY, null) ?: return
@@ -250,6 +269,11 @@ class BackpackBlock(
         player: EntityPlayer,
         willHarvest: Boolean
     ): Boolean {
+        val tileEntity = world.getTileEntity(pos) as? BackpackTileEntity
+        if (tileEntity?.wrapper?.hasEverlastingUpgrade() == true) {
+            return false
+        }
+        tileEntity?.wrapper?.stopJukeboxUpgrades()
         if (willHarvest) return true
         return super.removedByPlayer(state, world, pos, player, false)
     }
@@ -264,5 +288,16 @@ class BackpackBlock(
     ) {
         super.harvestBlock(worldIn, player, pos, state, te, stack)
         worldIn.setBlockToAir(pos)
+    }
+
+    private fun BackpackWrapper.hasEverlastingUpgrade(): Boolean =
+        gatherCapabilityUpgrades(Capabilities.EVERLASTING_UPGRADE_CAPABILITY)
+            .filterIsInstance<EverlastingUpgradeWrapper>()
+            .isNotEmpty()
+
+    private fun BackpackWrapper.stopJukeboxUpgrades() {
+        gatherCapabilityUpgrades(Capabilities.IJUKEBOX_UPGRADE_CAPABILITY)
+            .filterIsInstance<JukeboxUpgradeWrapper>()
+            .forEach { it.requestStop() }
     }
 }

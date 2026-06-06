@@ -22,12 +22,14 @@ import com.cleanroommc.retrosophisticatedbackpacks.common.gui.PlayerInventoryGui
 import com.cleanroommc.retrosophisticatedbackpacks.common.gui.PlayerInventoryGuiFactory
 import com.cleanroommc.retrosophisticatedbackpacks.handler.CapabilityHandler
 import com.cleanroommc.retrosophisticatedbackpacks.handler.RegistryHandler
+import com.cleanroommc.retrosophisticatedbackpacks.mixin.EntityItemAccessor
 import com.cleanroommc.retrosophisticatedbackpacks.util.IModelRegister
 import com.cleanroommc.retrosophisticatedbackpacks.util.Utils.asTranslationKey
 import net.minecraft.client.model.ModelBiped
 import net.minecraft.client.renderer.GlStateManager
 import net.minecraft.client.util.ITooltipFlag
 import net.minecraft.entity.Entity
+import net.minecraft.entity.item.EntityItem
 import net.minecraft.entity.EntityLivingBase
 import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.entity.player.EntityPlayerMP
@@ -183,9 +185,33 @@ class BackpackItem(
             if (entityIn.ticksExisted % 20 == 0)
                 wrapper.feed(entityIn, wrapper)
 
+            if (entityIn.ticksExisted % 5 == 0)
+                wrapper.tickUpgrades(entityIn, worldIn, entityIn.posX, entityIn.posY, entityIn.posZ)
+
             if (!wrapper.isCached)
                 CapabilityHandler.cacheBackpackInventory(wrapper)
         }
+    }
+
+    override fun onEntityItemUpdate(entityItem: EntityItem): Boolean {
+        val wrapper = entityItem.item.getCapability(Capabilities.BACKPACK_CAPABILITY, null) ?: return false
+        if (wrapper.gatherCapabilityUpgrades(Capabilities.EVERLASTING_UPGRADE_CAPABILITY).isEmpty()) {
+            return false
+        }
+
+        entityItem.lifespan = Int.MAX_VALUE
+        entityItem.setEntityInvulnerable(true)
+        (entityItem as EntityItemAccessor).`rsb$setAge`(0)
+        if (entityItem.posY < 1.0) {
+            entityItem.setPosition(entityItem.posX, 1.0, entityItem.posZ)
+            entityItem.motionY = 0.2
+        }
+        val material = entityItem.world.getBlockState(BlockPos(entityItem)).material
+        if (material == net.minecraft.block.material.Material.WATER || material == net.minecraft.block.material.Material.LAVA) {
+            entityItem.motionY = 0.08
+            entityItem.fallDistance = 0f
+        }
+        return false
     }
 
     override fun isValidArmor(stack: ItemStack, armorType: EntityEquipmentSlot, entity: Entity): Boolean =
@@ -283,7 +309,7 @@ class BackpackItem(
         val stack = data.usedItemStack
         val wrapper = stack.getCapability(Capabilities.BACKPACK_CAPABILITY, null)!!
         val slotIndex = if (data.inventoryType == InventoryType.PLAYER_INVENTORY) data.slotIndex else null
-        uiSettings.customContainer { BackpackContainer(wrapper, slotIndex) }
+        uiSettings.customContainer { BackpackContainer(wrapper, slotIndex, data.inventoryType, data.slotIndex) }
         val holder = BackpackGuiHolder.ItemStackGuiHolder(wrapper)
         return holder.buildUI(data, syncManager, uiSettings)
     }

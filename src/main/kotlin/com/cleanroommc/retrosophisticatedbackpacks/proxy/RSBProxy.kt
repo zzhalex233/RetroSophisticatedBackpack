@@ -3,11 +3,14 @@ package com.cleanroommc.retrosophisticatedbackpacks.proxy
 import com.cleanroommc.bogosorter.BogoSortAPI
 import com.cleanroommc.modularui.factory.GuiManager
 import com.cleanroommc.retrosophisticatedbackpacks.block.Blocks
+import com.cleanroommc.retrosophisticatedbackpacks.client.BackpackBlockEntityRenderer
 import com.cleanroommc.retrosophisticatedbackpacks.client.BackpackDynamicModel
+import com.cleanroommc.retrosophisticatedbackpacks.client.BackpackItemStackRenderer
 import com.cleanroommc.retrosophisticatedbackpacks.common.gui.PlayerInventoryGuiFactory
 import com.cleanroommc.retrosophisticatedbackpacks.common.gui.slot.ModularBackpackSlot
 import com.cleanroommc.retrosophisticatedbackpacks.common.gui.slot.ModularBackpackSlotWrapper
 import com.cleanroommc.retrosophisticatedbackpacks.item.Items
+import com.cleanroommc.retrosophisticatedbackpacks.tileentity.BackpackTileEntity
 import com.cleanroommc.retrosophisticatedbackpacks.util.Utils.asTranslationKey
 import net.minecraft.client.renderer.block.model.ModelResourceLocation
 import net.minecraft.client.settings.KeyBinding
@@ -79,6 +82,12 @@ abstract class RSBProxy {
 
             for (keyBinding in KEYBINDS)
                 ClientRegistry.registerKeyBinding(keyBinding)
+
+            ClientRegistry.bindTileEntitySpecialRenderer(BackpackTileEntity::class.java, BackpackBlockEntityRenderer())
+
+            for (backpackItem in Items.BACKPACK_ITEMS) {
+                backpackItem.tileEntityItemStackRenderer = BackpackItemStackRenderer()
+            }
         }
 
         override fun preInit(event: FMLPreInitializationEvent) {

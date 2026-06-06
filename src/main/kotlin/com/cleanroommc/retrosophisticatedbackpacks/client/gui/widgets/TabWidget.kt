@@ -27,6 +27,7 @@ class TabWidget(
             expandedWidget?.isEnabled = value
 
             field = value
+            markTooltipDirty()
         }
 
     var expandedWidget: ExpandedTabWidget? = null
@@ -43,9 +44,10 @@ class TabWidget(
             field = value
         }
     var tabIcon: IDrawable? = null
+    var onToggle: ((Boolean) -> Unit)? = null
 
     init {
-        size(TAB_TEXTURE.width, TAB_TEXTURE.height).top({ tabOrder * 30.0 }, Unit.Measure.PIXEL)
+        size(TAB_TEXTURE.width, TAB_TEXTURE.height).top({ 4.0 + tabOrder * 30.0 }, Unit.Measure.PIXEL)
 
         when (expandDirection) {
             ExpandDirection.LEFT -> left(-TAB_TEXTURE.width + 4)
@@ -57,12 +59,19 @@ class TabWidget(
         context.recipeViewerSettings.addExclusionArea(this)
     }
 
+    override fun dispose() {
+        if (isValid)
+            context.recipeViewerSettings.removeExclusionArea(this)
+        super.dispose()
+    }
+
     override fun onMousePressed(mouseButton: Int): Interactable.Result {
         if (!isEnabled || expandedWidget == null)
             return Interactable.Result.STOP
 
         if (mouseButton == 0) {
             expandedWidget?.updateTabState()
+            onToggle?.invoke(showExpanded)
             Interactable.playButtonClickSound()
             return Interactable.Result.SUCCESS
         }

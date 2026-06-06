@@ -9,7 +9,7 @@ import net.minecraft.util.EnumFacing
 import net.minecraftforge.common.capabilities.Capability
 
 class AdvancedFilterUpgradeWrapper : AdvancedUpgradeWrapper<FilterUpgradeItem>(), IFilterUpgrade {
-    override val settingsLangKey: String = "gui.advanced_filter_upgrade".asTranslationKey()
+    override val settingsLangKey: String = "gui.advanced_filter_settings".asTranslationKey()
     override var filterWay: IFilterUpgrade.FilterWayType = IFilterUpgrade.FilterWayType.IN_OUT
 
     override fun canInsert(stack: ItemStack): Boolean {

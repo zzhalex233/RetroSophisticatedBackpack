@@ -42,8 +42,8 @@ abstract class ExpandedTabWidget(
                 right(0)
 
                 upperTabRow
-                    .child(Widget().width(4).name("placeholder"))
-                    .child(titleKeyWidget)
+                    .width(width - 3)
+                    .child(titleKeyWidget.expanded())
                     .child(phantomTabWidget)
             }
 
@@ -60,25 +60,31 @@ abstract class ExpandedTabWidget(
         width(width)
             .height(coveredTabSize * 30)
             .background(TAB_TEXTURE)
-            .child(upperTabRow)
+            child(upperTabRow)
     }
 
     abstract fun updateTabState()
 
+    override fun dispose() {
+        if (isValid)
+            context.recipeViewerSettings.removeExclusionArea(this)
+        super.dispose()
+    }
+
     protected inner class PhantomTabWidget(tabIcon: Widget<*>) : SingleChildWidget<PhantomTabWidget>(), Interactable {
         init {
-            size(32, 28)
+            size(24, 28)
             tabIcon.size(16).top(6)
 
             when (expandDirection) {
                 ExpandDirection.LEFT -> {
                     right(0)
 
-                    tabIcon.right(8)
+                    tabIcon.right(4)
                 }
 
                 ExpandDirection.RIGHT -> {
-                    tabIcon.left(8)
+                    tabIcon.left(4)
                 }
             }
 

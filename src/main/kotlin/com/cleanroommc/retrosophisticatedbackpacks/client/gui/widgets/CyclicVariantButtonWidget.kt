@@ -35,7 +35,8 @@ class CyclicVariantButtonWidget(
                 mousePressedUpdater(this.index)
                 markTooltipDirty()
                 true
-            }.tooltipDynamic {
+            }.tooltipAutoUpdate(true)
+            .tooltipDynamic {
                 it.addLine(variants[this.index].name)
 
                 if (!inEffect) {

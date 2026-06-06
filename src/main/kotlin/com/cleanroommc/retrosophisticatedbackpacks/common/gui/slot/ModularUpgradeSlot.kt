@@ -7,6 +7,7 @@ import com.cleanroommc.retrosophisticatedbackpacks.item.ExponentialStackUpgradeI
 import com.cleanroommc.retrosophisticatedbackpacks.item.InceptionUpgradeItem
 import com.cleanroommc.retrosophisticatedbackpacks.item.StackUpgradeItem
 import com.cleanroommc.retrosophisticatedbackpacks.item.UpgradeItem
+import com.cleanroommc.retrosophisticatedbackpacks.item.BatteryUpgradeItem
 import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.item.ItemStack
 
@@ -16,7 +17,7 @@ class ModularUpgradeSlot(
     index: Int,
 ) : ModularSlot(wrapper.upgradeItemStackHandler, index) {
     override fun canTakeStack(playerIn: EntityPlayer): Boolean {
-        if (panel.settingPanel.isPanelOpen)
+        if (panel.isSettingMode)
             return false
 
         val originalUpgradeItem = stack.item
@@ -51,6 +52,7 @@ class ModularUpgradeSlot(
     override fun isItemValid(stack: ItemStack): Boolean = when (val item = stack.item) {
         is StackUpgradeItem -> wrapper.canAddStackUpgrade(item.multiplier())
         is ExponentialStackUpgradeItem -> wrapper.canAddExponentialStackUpgrade()
+        is BatteryUpgradeItem -> wrapper.canAddBatteryUpgrade()
         else -> item is UpgradeItem
     }
 }
