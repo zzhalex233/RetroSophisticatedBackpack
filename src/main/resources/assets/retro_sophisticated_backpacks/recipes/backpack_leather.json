@@ -2,13 +2,16 @@
   "type": "minecraft:crafting_shaped",
   "key": {
     "L": {
-      "item": "minecraft:leather"
+      "type": "forge:ore_dict",
+      "ore": "leather"
     },
     "C": {
-      "item": "minecraft:chest"
+      "type": "forge:ore_dict",
+      "ore": "chestWood"
     },
     "S": {
-      "item": "minecraft:string"
+      "type": "forge:ore_dict",
+      "ore": "string"
     }
   },
   "pattern": [

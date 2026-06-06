@@ -2,10 +2,12 @@
   "type": "retro_sophisticated_backpacks:backpack_upgrade_shaped",
   "key": {
     "U": {
-      "item": "minecraft:obsidian"
+      "type": "forge:ore_dict",
+      "ore": "obsidian"
     },
     "N": {
-      "item": "minecraft:nether_star"
+      "type": "forge:ore_dict",
+      "ore": "netherStar"
     },
     "B": {
       "item": "retro_sophisticated_backpacks:backpack_diamond"

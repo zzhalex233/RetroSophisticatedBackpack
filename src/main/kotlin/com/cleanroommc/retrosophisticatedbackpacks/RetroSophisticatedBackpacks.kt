@@ -1,5 +1,6 @@
 package com.cleanroommc.retrosophisticatedbackpacks
 
+import com.cleanroommc.retrosophisticatedbackpacks.compat.theoneprobe.OneProbePlugin
 import com.cleanroommc.retrosophisticatedbackpacks.handler.CapabilityHandler
 import com.cleanroommc.retrosophisticatedbackpacks.handler.NetworkHandler
 import com.cleanroommc.retrosophisticatedbackpacks.item.Items
@@ -11,6 +12,7 @@ import net.minecraftforge.fml.common.Loader
 import net.minecraftforge.fml.common.Mod
 import net.minecraftforge.fml.common.SidedProxy
 import net.minecraftforge.fml.common.event.FMLInitializationEvent
+import net.minecraftforge.fml.common.event.FMLInterModComms
 import net.minecraftforge.fml.common.event.FMLPostInitializationEvent
 import net.minecraftforge.fml.common.event.FMLPreInitializationEvent
 import net.minecraftforge.fml.common.event.FMLServerStoppedEvent
@@ -41,6 +43,8 @@ object RetroSophisticatedBackpacks {
 
     var baublesLoaded = false
         private set
+    var appleCoreLoaded = false
+        private set
 
     val CREATIVE_TAB = object : CreativeTabs("creative_tab".asTranslationKey()) {
         override fun createIcon(): ItemStack =
@@ -52,8 +56,11 @@ object RetroSophisticatedBackpacks {
         CapabilityHandler.register()
 
         baublesLoaded = Loader.isModLoaded("baubles")
+        appleCoreLoaded = Loader.isModLoaded("applecore")
 
         proxy.preInit(event)
+
+        FMLInterModComms.sendFunctionMessage("theoneprobe", "getTheOneProbe", OneProbePlugin::class.java.name)
     }
 
     @Mod.EventHandler

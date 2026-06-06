@@ -4,8 +4,8 @@ import com.cleanroommc.retrosophisticatedbackpacks.backpack.BackpackDataFixer
 import com.cleanroommc.retrosophisticatedbackpacks.capability.Capabilities
 import com.cleanroommc.retrosophisticatedbackpacks.inventory.ExposedItemStackHandler
 import com.cleanroommc.retrosophisticatedbackpacks.item.FeedingUpgradeItem
+import com.cleanroommc.retrosophisticatedbackpacks.util.BackpackItemStackHelper
 import com.cleanroommc.retrosophisticatedbackpacks.util.Utils.asTranslationKey
-import net.minecraft.item.ItemFood
 import net.minecraft.item.ItemStack
 import net.minecraft.nbt.NBTTagCompound
 import net.minecraft.util.EnumFacing
@@ -17,23 +17,17 @@ class FeedingUpgradeWrapper : BasicUpgradeWrapper<FeedingUpgradeItem>(), IFeedin
 
     override val filterItems: ExposedItemStackHandler = object : ExposedItemStackHandler(9) {
         override fun isItemValid(slot: Int, stack: ItemStack): Boolean =
-            stack.item is ItemFood
+            IFeedingUpgrade.isValidFood(stack)
     }
 
     override fun checkFilter(stack: ItemStack): Boolean =
-        stack.item is ItemFood && super.checkFilter(stack)
+        IFeedingUpgrade.isValidFood(stack) && super.checkFilter(stack)
 
     override fun getFoodSlot(handler: IItemHandler, foodLevel: Int, health: Float, maxHealth: Float): Int {
         for (slot in 0 until handler.slots) {
-            val stack = handler.getStackInSlot(slot)
+            val hunger = BackpackItemStackHelper.getHungerFromSlot(handler, slot, ::checkFilter) ?: continue
 
-            if (!checkFilter(stack))
-                continue
-
-            val item = stack.item as? ItemFood ?: continue
-            val healingAmount = item.getHealAmount(stack)
-
-            if (healingAmount <= 20 - foodLevel)
+            if (hunger <= 20 - foodLevel)
                 return slot
         }
 

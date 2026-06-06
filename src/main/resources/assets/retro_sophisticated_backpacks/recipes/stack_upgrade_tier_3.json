@@ -2,7 +2,8 @@
   "type": "minecraft:crafting_shaped",
   "key": {
     "U": {
-      "item": "minecraft:diamond_block"
+      "type": "forge:ore_dict",
+      "ore": "blockDiamond"
     },
     "B": {
       "item": "retro_sophisticated_backpacks:stack_upgrade_tier_2"

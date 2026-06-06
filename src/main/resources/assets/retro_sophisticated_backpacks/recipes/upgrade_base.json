@@ -2,13 +2,16 @@
   "type": "minecraft:crafting_shaped",
   "key": {
     "I": {
-      "item": "minecraft:iron_ingot"
+      "type": "forge:ore_dict",
+      "ore": "ingotIron"
     },
     "L": {
-      "item": "minecraft:leather"
+      "type": "forge:ore_dict",
+      "ore": "leather"
     },
     "S": {
-      "item": "minecraft:string"
+      "type": "forge:ore_dict",
+      "ore": "string"
     }
   },
   "pattern": [

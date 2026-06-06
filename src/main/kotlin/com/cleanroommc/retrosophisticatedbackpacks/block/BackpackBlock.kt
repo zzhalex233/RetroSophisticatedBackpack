@@ -181,6 +181,9 @@ class BackpackBlock(
         val tileEntity = worldIn.getTileEntity(pos) as? BackpackTileEntity ?: return
 
         tileEntity.wrapper.deserializeNBT(backpackInventory.serializeNBT())
+        if (stack.hasDisplayName())
+            tileEntity.wrapper.customName = stack.displayName
+
         val (leftTank, rightTank) = tileEntity.wrapper.tankRenderSides()
         worldIn.setBlockState(
             pos,
@@ -258,8 +261,15 @@ class BackpackBlock(
         val tileEntityBackpackInventory = tileEntity.getCapability(Capabilities.BACKPACK_CAPABILITY, null) ?: return
         val stackBackpackInventory = stack.getCapability(Capabilities.BACKPACK_CAPABILITY, null) ?: return
         stackBackpackInventory.deserializeNBT(tileEntityBackpackInventory.serializeNBT())
+        if (tileEntity.hasCustomName())
+            stack.setStackDisplayName(tileEntity.name)
 
         drops.add(stack)
+    }
+
+    override fun breakBlock(worldIn: World, pos: BlockPos, state: IBlockState) {
+        worldIn.updateComparatorOutputLevel(pos, state.block)
+        super.breakBlock(worldIn, pos, state)
     }
 
     override fun removedByPlayer(

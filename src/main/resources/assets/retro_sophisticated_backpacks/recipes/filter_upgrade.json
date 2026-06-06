@@ -2,10 +2,12 @@
   "type": "minecraft:crafting_shaped",
   "key": {
     "S": {
-      "item": "minecraft:string"
+      "type": "forge:ore_dict",
+      "ore": "string"
     },
     "R": {
-      "item": "minecraft:redstone"
+      "type": "forge:ore_dict",
+      "ore": "dustRedstone"
     },
     "B": {
       "item": "retro_sophisticated_backpacks:upgrade_base"

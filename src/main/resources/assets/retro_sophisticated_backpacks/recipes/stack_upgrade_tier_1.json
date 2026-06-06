@@ -2,7 +2,8 @@
   "type": "minecraft:crafting_shaped",
   "key": {
     "U": {
-      "item": "minecraft:iron_block"
+      "type": "forge:ore_dict",
+      "ore": "blockIron"
     },
     "B": {
       "item": "retro_sophisticated_backpacks:stack_upgrade_starter_tier"

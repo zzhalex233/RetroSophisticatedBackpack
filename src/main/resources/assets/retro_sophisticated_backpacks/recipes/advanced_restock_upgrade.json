@@ -2,13 +2,16 @@
   "type": "retro_sophisticated_backpacks:upgrade_shaped",
   "key": {
     "G": {
-      "item": "minecraft:gold_ingot"
+      "type": "forge:ore_dict",
+      "ore": "ingotGold"
     },
     "D": {
-      "item": "minecraft:diamond"
+      "type": "forge:ore_dict",
+      "ore": "gemDiamond"
     },
     "R": {
-      "item": "minecraft:redstone"
+      "type": "forge:ore_dict",
+      "ore": "dustRedstone"
     },
     "B": {
       "item": "retro_sophisticated_backpacks:restock_upgrade"
