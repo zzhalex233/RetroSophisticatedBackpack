@@ -38,6 +38,7 @@ class BackpackInventoryScrollWidget(panel: BackpackPanel) :
                         .name("slot_$i")
                 )
             }
+            slots.child(MobCatcherInventoryControlWidget(panel).pos(0, 0).name("mob_catcher_inventory_control"))
             return slots
         }
     }

@@ -52,8 +52,13 @@ class BackpackSlot(private val panel: BackpackPanel, private val wrapper: Backpa
         get() = panel.isSortingSettingTabOpened
     private val isInItemDisplaySettingMode: Boolean
         get() = panel.isItemDisplaySettingTabOpened
+    private val isBlockedByCapturedMob: Boolean
+        get() = wrapper.isSlotBlockedByMobCatcher(slot.slotIndex)
 
     override fun buildTooltip(stack: ItemStack, tooltip: RichTooltip) {
+        if (isBlockedByCapturedMob)
+            return
+
         val memorizedStack = wrapper.getMemorizedStack(slot.slotIndex)
 
         if (stack.isEmpty && memorizedStack.isEmpty)
@@ -105,6 +110,7 @@ class BackpackSlot(private val panel: BackpackPanel, private val wrapper: Backpa
 
     override fun onMousePressed(mouseButton: Int): Interactable.Result =
         when {
+            isBlockedByCapturedMob -> Interactable.Result.STOP
             isInItemDisplaySettingMode -> handleItemDisplaySlotClick(mouseButton)
             isInMemorySettingMode -> handleMemorySlotClick(mouseButton)
             isInSortSettingMode -> handleSortSlotClick(mouseButton)
@@ -114,10 +120,13 @@ class BackpackSlot(private val panel: BackpackPanel, private val wrapper: Backpa
         }
 
     override fun onMouseRelease(mouseButton: Int): Boolean =
-        if (isInSettingMode) true
+        if (isBlockedByCapturedMob || isInSettingMode) true
         else super.onMouseRelease(mouseButton)
 
     override fun onMouseDrag(mouseButton: Int, timeSinceClick: Long) {
+        if (isBlockedByCapturedMob) {
+            return
+        }
         if (isInMemorySettingMode) {
             handleMemorySlotClick(mouseButton)
             return
@@ -203,6 +212,9 @@ class BackpackSlot(private val panel: BackpackPanel, private val wrapper: Backpa
     @SideOnly(Side.CLIENT)
     override fun draw(context: ModularGuiContext?, widgetThemeEntry: WidgetThemeEntry<*>?) {
         context?.let {
+            if (isBlockedByCapturedMob)
+                return
+
             val widgetTheme = widgetThemeEntry?.theme ?: WidgetTheme.getDefault().theme
 
             if (isInSettingMode) {

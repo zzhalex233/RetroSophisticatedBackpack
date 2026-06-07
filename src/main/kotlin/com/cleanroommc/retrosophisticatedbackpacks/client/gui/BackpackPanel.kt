@@ -33,6 +33,7 @@ import com.cleanroommc.retrosophisticatedbackpacks.common.gui.slot.LockedPlayerS
 import com.cleanroommc.retrosophisticatedbackpacks.common.gui.slot.ModularBackpackSlot
 import com.cleanroommc.retrosophisticatedbackpacks.common.gui.slot.ModularUpgradeSlot
 import com.cleanroommc.retrosophisticatedbackpacks.config.ClientConfig
+import com.cleanroommc.retrosophisticatedbackpacks.config.Config
 import com.cleanroommc.retrosophisticatedbackpacks.item.UpgradeItem
 import com.cleanroommc.retrosophisticatedbackpacks.sync.BackpackSH
 import com.cleanroommc.retrosophisticatedbackpacks.sync.BackpackSlotSH
@@ -538,7 +539,10 @@ class BackpackPanel(
         upgradeSlotGroupWidget.setEnabledIf { !isSettingMode }
 
         for (i in 0 until backpackWrapper.upgradeSlotsSize()) {
-            val itemSlot = NoBackgroundItemSlot().syncHandler("upgrades", i).pos(5, 5 + i * 16).name("slot_${i}")
+            val itemSlot = NoBackgroundItemSlot(RSBTextures.EMPTY_UPGRADE_SLOT)
+                .syncHandler("upgrades", i)
+                .pos(5, 5 + i * 16)
+                .name("slot_${i}")
 
             upgradeSlotWidgets.add(itemSlot)
             upgradeSlotGroupWidget.child(itemSlot)
@@ -613,8 +617,10 @@ class BackpackPanel(
         }
 
         child(SettingTabWidget().setEnabledIf { !isSettingMode })
-            .child(itemDisplaySettingTabWidget)
-            .child(memorySettingTabWidget)
+        if (!Config.itemDisplayDisabled) {
+            child(itemDisplaySettingTabWidget)
+        }
+        child(memorySettingTabWidget)
             .child(sortingSettingTabWidget)
             .child(backpackSettingTabWidget)
             .child(backToBackpackTab)
@@ -687,7 +693,7 @@ class BackpackPanel(
     }
 
     fun openItemDisplaySettings(tabWidget: TabWidget, open: Boolean) {
-        if (!isSettingMode)
+        if (!isSettingMode || Config.itemDisplayDisabled)
             return
 
         itemDisplaySettingTabWidget.showExpanded = open
@@ -715,7 +721,7 @@ class BackpackPanel(
         backpackSettingTabWidget.isEnabled = isSettingMode
         memorySettingTabWidget.isEnabled = isSettingMode
         sortingSettingTabWidget.isEnabled = isSettingMode
-        itemDisplaySettingTabWidget.isEnabled = isSettingMode
+        itemDisplaySettingTabWidget.isEnabled = isSettingMode && !Config.itemDisplayDisabled
         isBackpackSettingTabOpened = false
         isMemorySettingTabOpened = false
         shouldMemorizeRespectNBT = false
@@ -748,6 +754,9 @@ class BackpackPanel(
     private fun updateSettingTabEnabledStates(openTab: TabWidget, open: Boolean) {
         listOf(backpackSettingTabWidget, sortingSettingTabWidget, memorySettingTabWidget, itemDisplaySettingTabWidget)
             .forEach { it.isEnabled = !open || it == openTab }
+        if (Config.itemDisplayDisabled) {
+            itemDisplaySettingTabWidget.isEnabled = false
+        }
     }
 
     private fun closeUpgradeTabs(syncToServer: Boolean) {
@@ -988,7 +997,7 @@ class BackpackPanel(
                             wrapper
                         )
                     )
-                        tabWidget.expandedWidget = JukeboxUpgradeWidget(slotIndex, wrapper, stack, 12)
+                        tabWidget.expandedWidget = JukeboxUpgradeWidget(slotIndex, wrapper, stack, wrapper.discInventory.slots)
                 }
 
                 is JukeboxUpgradeWrapper -> {
@@ -998,7 +1007,7 @@ class BackpackPanel(
                             wrapper
                         )
                     )
-                        tabWidget.expandedWidget = JukeboxUpgradeWidget(slotIndex, wrapper, stack, 1)
+                        tabWidget.expandedWidget = JukeboxUpgradeWidget(slotIndex, wrapper, stack, wrapper.discInventory.slots)
                 }
 
                 is AdvancedToolSwapperUpgradeWrapper -> {

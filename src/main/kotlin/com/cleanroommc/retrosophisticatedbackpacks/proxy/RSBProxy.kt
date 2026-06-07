@@ -6,15 +6,19 @@ import com.cleanroommc.retrosophisticatedbackpacks.block.Blocks
 import com.cleanroommc.retrosophisticatedbackpacks.client.BackpackBlockEntityRenderer
 import com.cleanroommc.retrosophisticatedbackpacks.client.BackpackDynamicModel
 import com.cleanroommc.retrosophisticatedbackpacks.client.BackpackItemStackRenderer
+import com.cleanroommc.retrosophisticatedbackpacks.capability.upgrade.mobcatcher.MobCatcherStorage
+import com.cleanroommc.retrosophisticatedbackpacks.common.gui.BackpackContainer
 import com.cleanroommc.retrosophisticatedbackpacks.common.gui.PlayerInventoryGuiFactory
 import com.cleanroommc.retrosophisticatedbackpacks.common.gui.slot.ModularBackpackSlot
 import com.cleanroommc.retrosophisticatedbackpacks.common.gui.slot.ModularBackpackSlotWrapper
 import com.cleanroommc.retrosophisticatedbackpacks.item.Items
 import com.cleanroommc.retrosophisticatedbackpacks.tileentity.BackpackTileEntity
 import com.cleanroommc.retrosophisticatedbackpacks.util.Utils.asTranslationKey
+import net.minecraft.client.Minecraft
 import net.minecraft.client.renderer.block.model.ModelResourceLocation
 import net.minecraft.client.settings.KeyBinding
 import net.minecraft.item.Item
+import net.minecraft.nbt.NBTTagCompound
 import net.minecraftforge.client.model.ModelLoader
 import net.minecraftforge.client.model.ModelLoaderRegistry
 import net.minecraftforge.fml.client.registry.ClientRegistry
@@ -49,6 +53,8 @@ abstract class RSBProxy {
     open fun postInit(event: FMLPostInitializationEvent) {}
 
     open fun registerItemRenderer(item: Item, meta: Int, id: String) {}
+
+    open fun applyMobCatcherContentsSync(nbt: NBTTagCompound) {}
 
     class ServerProxy : RSBProxy()
 
@@ -94,6 +100,14 @@ abstract class RSBProxy {
             super.preInit(event)
 
             ModelLoaderRegistry.registerLoader(BackpackDynamicModel.Loader())
+        }
+
+        override fun applyMobCatcherContentsSync(nbt: NBTTagCompound) {
+            val mc = Minecraft.getMinecraft()
+            mc.addScheduledTask {
+                val container = mc.player?.openContainer as? BackpackContainer ?: return@addScheduledTask
+                MobCatcherStorage.applyCapturedMobsTag(container.backpackWrapper, nbt)
+            }
         }
     }
 }

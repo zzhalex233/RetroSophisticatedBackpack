@@ -5,6 +5,7 @@ import com.cleanroommc.retrosophisticatedbackpacks.backpack.DisplaySide
 import com.cleanroommc.retrosophisticatedbackpacks.backpack.BackpackInventoryHelper
 import com.cleanroommc.retrosophisticatedbackpacks.backpack.SortType
 import com.cleanroommc.retrosophisticatedbackpacks.capability.BackpackWrapper
+import com.cleanroommc.retrosophisticatedbackpacks.config.Config
 import com.cleanroommc.retrosophisticatedbackpacks.tileentity.BackpackTileEntity
 import net.minecraft.item.EnumDyeColor
 import net.minecraft.network.PacketBuffer
@@ -47,10 +48,16 @@ class BackpackSH(
             UPDATE_ITEM_DISPLAY_SLOT -> updateItemDisplaySlot(buf)
             UPDATE_ITEM_DISPLAY_ROTATION -> updateItemDisplayRotation(buf)
             UPDATE_ITEM_DISPLAY_COLOR -> {
+                if (Config.itemDisplayDisabled) {
+                    return
+                }
                 wrapper.itemDisplayColor = buf.readEnumValue(EnumDyeColor::class.java)
                 syncRenderState()
             }
             UPDATE_ITEM_DISPLAY_SIDE -> {
+                if (Config.itemDisplayDisabled) {
+                    return
+                }
                 wrapper.itemDisplaySide = buf.readEnumValue(DisplaySide::class.java)
                 syncRenderState()
             }
@@ -98,6 +105,9 @@ class BackpackSH(
     }
 
     private fun updateItemDisplaySlot(buf: PacketBuffer) {
+        if (Config.itemDisplayDisabled) {
+            return
+        }
         val slotIndex = buf.readInt()
         val selected = buf.readBoolean()
         if (selected) {
@@ -109,6 +119,9 @@ class BackpackSH(
     }
 
     private fun updateItemDisplayRotation(buf: PacketBuffer) {
+        if (Config.itemDisplayDisabled) {
+            return
+        }
         wrapper.rotateItemDisplaySlot(buf.readInt(), buf.readBoolean())
         syncRenderState()
     }

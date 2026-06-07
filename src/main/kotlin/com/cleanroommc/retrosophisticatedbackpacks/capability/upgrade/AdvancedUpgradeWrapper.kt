@@ -10,7 +10,8 @@ import net.minecraft.util.EnumFacing
 import net.minecraftforge.common.capabilities.Capability
 import net.minecraftforge.common.util.Constants
 
-abstract class AdvancedUpgradeWrapper<T>(filterSlots: Int = 16) : UpgradeWrapper<T>(), IToggleable, IAdvancedFilterable where T : UpgradeItem {
+abstract class AdvancedUpgradeWrapper<T>(filterSlots: Int = 16, override val slotsInRow: Int = 4) :
+    UpgradeWrapper<T>(), IToggleable, IAdvancedFilterable where T : UpgradeItem {
     override var enabled = true
     override var filterType = IBasicFilterable.FilterType.WHITELIST
     override val filterItems: ExposedItemStackHandler = ExposedItemStackHandler(filterSlots)

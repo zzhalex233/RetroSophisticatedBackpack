@@ -20,6 +20,7 @@ import com.cleanroommc.retrosophisticatedbackpacks.common.gui.BackpackGuiHolder
 import com.cleanroommc.retrosophisticatedbackpacks.common.gui.PlayerInventoryGuiData
 import com.cleanroommc.retrosophisticatedbackpacks.common.gui.PlayerInventoryGuiData.InventoryType
 import com.cleanroommc.retrosophisticatedbackpacks.common.gui.PlayerInventoryGuiFactory
+import com.cleanroommc.retrosophisticatedbackpacks.config.Config
 import com.cleanroommc.retrosophisticatedbackpacks.handler.CapabilityHandler
 import com.cleanroommc.retrosophisticatedbackpacks.handler.RegistryHandler
 import com.cleanroommc.retrosophisticatedbackpacks.mixin.EntityItemAccessor
@@ -188,7 +189,7 @@ class BackpackItem(
             if (entityIn.ticksExisted % 5 == 0)
                 wrapper.tickUpgrades(entityIn, worldIn, entityIn.posX, entityIn.posY, entityIn.posZ)
 
-            if (!wrapper.isCached)
+            if (!Config.tickDedupeLogicDisabled && !wrapper.isCached)
                 CapabilityHandler.cacheBackpackInventory(wrapper)
         }
     }

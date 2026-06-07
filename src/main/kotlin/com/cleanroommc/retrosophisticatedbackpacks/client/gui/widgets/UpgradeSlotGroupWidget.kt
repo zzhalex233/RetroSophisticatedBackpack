@@ -72,11 +72,6 @@ class UpgradeSlotGroupWidget(private val panel: BackpackPanel, private val slotS
         )
         LOWER_TAB_TEXTURE.draw(context, 0, heightWithoutBottom, 25, 6, widgetTheme.getThemeOrDefault())
 
-        for (slot in 0 until slotSize) {
-            if (panel.backpackWrapper.upgradeItemStackHandler.getStackInSlot(slot).isEmpty) {
-                RSBTextures.EMPTY_UPGRADE_SLOT.draw(context, 6, 6 + slot * 16, 16, 16, widgetTheme.getThemeOrDefault())
-            }
-        }
     }
 
     class UpgradeToggleWidget(private val panel: BackpackPanel, private val slotIndex: Int) :

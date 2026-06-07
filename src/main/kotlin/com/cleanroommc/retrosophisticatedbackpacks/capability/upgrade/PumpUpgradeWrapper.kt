@@ -3,6 +3,7 @@ package com.cleanroommc.retrosophisticatedbackpacks.capability.upgrade
 import com.cleanroommc.retrosophisticatedbackpacks.capability.BackpackFluidHandler
 import com.cleanroommc.retrosophisticatedbackpacks.capability.BackpackWrapper
 import com.cleanroommc.retrosophisticatedbackpacks.capability.Capabilities
+import com.cleanroommc.retrosophisticatedbackpacks.config.Config
 import com.cleanroommc.retrosophisticatedbackpacks.item.PumpUpgradeItem
 import com.cleanroommc.retrosophisticatedbackpacks.util.Utils.asTranslationKey
 import net.minecraft.entity.player.EntityPlayer
@@ -42,7 +43,6 @@ open class PumpUpgradeWrapper(
         private const val FLUID_HANDLER_COOLDOWN = 20L
         private const val PLAYER_SEARCH_RANGE = 3.0
         private const val WORLD_RANGE = 4
-        private const val MAX_INPUT_OUTPUT_PER_ROW = 20
     }
 
     override val settingsLangKey = "gui.pump_settings".asTranslationKey()
@@ -212,10 +212,13 @@ open class PumpUpgradeWrapper(
     }
 
     private fun getMaxInOut(wrapper: BackpackWrapper): Int =
-        maxOf(Fluid.BUCKET_VOLUME, getSlotRows(wrapper) * MAX_INPUT_OUTPUT_PER_ROW * maxOf(1, wrapper.getTotalStackMultiplier()))
+        maxOf(Fluid.BUCKET_VOLUME, (getSlotRows(wrapper) * Config.pumpUpgrade.maxInputOutput * getAdjustedStackMultiplier(wrapper)).toInt())
 
     private fun getSlotRows(wrapper: BackpackWrapper): Int =
         maxOf(1, (wrapper.backpackInventorySize() + 8) / 9)
+
+    private fun getAdjustedStackMultiplier(wrapper: BackpackWrapper): Double =
+        1.0 + Config.pumpUpgrade.stackMultiplierRatio * (wrapper.getTotalStackMultiplier() - 1)
 
     private fun distanceSq(first: BlockPos, second: BlockPos): Int {
         val dx = first.x - second.x
@@ -263,7 +266,7 @@ open class PumpUpgradeWrapper(
 }
 
 class AdvancedPumpUpgradeWrapper : PumpUpgradeWrapper(
-    filterSlots = 4,
+    filterSlots = Config.pumpUpgrade.filterSlots,
     interactWithHandDefault = true,
     interactWithWorldDefault = false,
     interactWithFluidHandlersDefault = true

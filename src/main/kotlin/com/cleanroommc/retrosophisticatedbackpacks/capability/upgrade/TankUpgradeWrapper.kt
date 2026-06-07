@@ -2,6 +2,7 @@ package com.cleanroommc.retrosophisticatedbackpacks.capability.upgrade
 
 import com.cleanroommc.retrosophisticatedbackpacks.capability.Capabilities
 import com.cleanroommc.retrosophisticatedbackpacks.capability.BackpackWrapper
+import com.cleanroommc.retrosophisticatedbackpacks.config.Config
 import com.cleanroommc.retrosophisticatedbackpacks.inventory.ExposedItemStackHandler
 import com.cleanroommc.retrosophisticatedbackpacks.item.TankUpgradeItem
 import com.cleanroommc.retrosophisticatedbackpacks.util.Utils.asTranslationKey
@@ -27,12 +28,10 @@ class TankUpgradeWrapper : UpgradeWrapper<TankUpgradeItem>(), ITankUpgrade {
         private const val INPUT_RESULT_SLOT = 2
         private const val OUTPUT_RESULT_SLOT = 3
         private const val BUCKET = 1000
-        private const val CAPACITY_PER_ROW = 4000
-        private const val MAX_INPUT_OUTPUT_PER_ROW = 20
     }
 
     override val settingsLangKey = "gui.tank_settings".asTranslationKey()
-    override val tankCapacity = CAPACITY_PER_ROW * 3
+    override val tankCapacity = Config.tankUpgrade.capacityPerSlotRow * 3
     private var fluid: FluidStack? = null
     private val inventory = object : ExposedItemStackHandler(4) {
         override fun isItemValid(slot: Int, stack: ItemStack): Boolean =
@@ -47,16 +46,16 @@ class TankUpgradeWrapper : UpgradeWrapper<TankUpgradeItem>(), ITankUpgrade {
         fluid?.copy()
 
     override fun getTankCapacity(wrapper: BackpackWrapper): Int =
-        maxOf(BUCKET, getSlotRows(wrapper) * CAPACITY_PER_ROW * getStackMultiplier(wrapper))
+        maxOf(BUCKET, (getSlotRows(wrapper) * Config.tankUpgrade.capacityPerSlotRow * getAdjustedStackMultiplier(wrapper)).toInt())
 
     private fun getMaxInOut(wrapper: BackpackWrapper): Int =
-        maxOf(BUCKET, getSlotRows(wrapper) * MAX_INPUT_OUTPUT_PER_ROW * getStackMultiplier(wrapper))
+        maxOf(BUCKET, (getSlotRows(wrapper) * Config.tankUpgrade.maxInputOutput * getAdjustedStackMultiplier(wrapper)).toInt())
 
     private fun getSlotRows(wrapper: BackpackWrapper): Int =
         maxOf(1, (wrapper.backpackInventorySize() + 8) / 9)
 
-    private fun getStackMultiplier(wrapper: BackpackWrapper): Int =
-        maxOf(1, wrapper.getTotalStackMultiplier())
+    private fun getAdjustedStackMultiplier(wrapper: BackpackWrapper): Double =
+        1.0 + Config.tankUpgrade.stackMultiplierRatio * (wrapper.getTotalStackMultiplier() - 1)
 
     override fun fill(wrapper: BackpackWrapper, resource: FluidStack, doFill: Boolean, ignoreInOutLimit: Boolean): Int {
         val current = fluid
@@ -98,7 +97,7 @@ class TankUpgradeWrapper : UpgradeWrapper<TankUpgradeItem>(), ITankUpgrade {
     }
 
     override fun tick(wrapper: BackpackWrapper, world: World) {
-        if (world.totalWorldTime % 20L != 0L) {
+        if (world.totalWorldTime % Config.tankUpgrade.autoFillDrainContainerCooldown.coerceAtLeast(1).toLong() != 0L) {
             return
         }
         tryDrainInput(wrapper)

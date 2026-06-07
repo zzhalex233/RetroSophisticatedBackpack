@@ -106,6 +106,8 @@ interface IAdvancedFilterable : IBasicFilterable {
     object Impl : IAdvancedFilterable {
         override val filterItems: ExposedItemStackHandler
             get() = ExposedItemStackHandler(0)
+        override val slotsInRow: Int
+            get() = 1
         override var filterType: IBasicFilterable.FilterType
             get() = IBasicFilterable.Impl.filterType
             set(_) {}

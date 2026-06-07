@@ -11,6 +11,7 @@ import com.cleanroommc.modularui.widgets.ButtonWidget
 import com.cleanroommc.retrosophisticatedbackpacks.capability.BackpackWrapper
 import com.cleanroommc.retrosophisticatedbackpacks.client.gui.BackpackPanel
 import com.cleanroommc.retrosophisticatedbackpacks.client.gui.RSBTextures
+import com.cleanroommc.retrosophisticatedbackpacks.config.Config
 import com.cleanroommc.retrosophisticatedbackpacks.sync.BackpackSH
 import com.cleanroommc.retrosophisticatedbackpacks.util.Utils.asTranslationKey
 import com.cleanroommc.retrosophisticatedbackpacks.util.Utils.getThemeOrDefault
@@ -91,7 +92,9 @@ class BackpackMainSettingsWidget(
             .child(shiftClickButton)
             .child(keepTabOpenButton)
             .child(keepSearchPhraseButton)
-            .child(otherPlayerButton)
+        if (Config.allowOpeningOtherPlayerBackpacks) {
+            child(otherPlayerButton)
+        }
     }
 
     override fun updateTabState() {

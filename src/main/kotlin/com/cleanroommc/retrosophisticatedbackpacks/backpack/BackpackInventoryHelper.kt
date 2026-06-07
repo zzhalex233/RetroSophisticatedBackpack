@@ -2,6 +2,7 @@ package com.cleanroommc.retrosophisticatedbackpacks.backpack
 
 import com.cleanroommc.retrosophisticatedbackpacks.capability.BackpackWrapper
 import com.cleanroommc.retrosophisticatedbackpacks.capability.Capabilities
+import com.cleanroommc.retrosophisticatedbackpacks.config.Config
 import com.cleanroommc.retrosophisticatedbackpacks.item.BackpackItem
 import net.minecraft.entity.Entity
 import net.minecraft.inventory.IInventory
@@ -40,7 +41,7 @@ object BackpackInventoryHelper {
 
             val isMemorizedSlot = wrapper.isSlotMemorized(i)
             val baseStack = wrapper.getStackInSlot(i)
-            val maxSize = baseStack.maxStackSize * wrapper.getTotalStackMultiplier()
+            val maxSize = wrapper.getStackLimit(baseStack)
 
             for (j in i + 1 until wrapper.backpackInventorySize()) {
                 if (isMemorizedSlot != wrapper.isSlotMemorized(j) || wrapper.isSlotLocked(j))
@@ -167,6 +168,9 @@ object BackpackInventoryHelper {
     }
 
     fun attemptDepositOnTileEntity(wrapper: BackpackWrapper, destination: TileEntity, facing: EnumFacing): Boolean {
+        if (Config.isInteractionBlockDisallowed(destination.blockType)) {
+            return false
+        }
         val destination = getHandler(destination, facing) ?: return false
         return attemptDepositOnItemHandler(wrapper, destination)
     }
@@ -204,6 +208,9 @@ object BackpackInventoryHelper {
     }
 
     fun attemptRestockFromTileEntity(wrapper: BackpackWrapper, source: TileEntity, facing: EnumFacing): Boolean {
+        if (Config.isInteractionBlockDisallowed(source.blockType)) {
+            return false
+        }
         val source = getHandler(source, facing) ?: return false
         return attemptRestockFromItemHandler(wrapper, source)
     }

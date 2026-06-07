@@ -3,6 +3,7 @@ package com.cleanroommc.retrosophisticatedbackpacks.item
 import com.cleanroommc.retrosophisticatedbackpacks.backpack.BackpackTier
 import com.cleanroommc.retrosophisticatedbackpacks.block.Blocks
 import com.cleanroommc.retrosophisticatedbackpacks.capability.upgrade.*
+import com.cleanroommc.retrosophisticatedbackpacks.capability.upgrade.mobcatcher.MobCatcherUpgradeWrapper
 import com.cleanroommc.retrosophisticatedbackpacks.config.Config
 import net.minecraft.item.Item
 
@@ -19,8 +20,8 @@ object Items {
     val backpackLeather = BackpackItem(
         "backpack_leather",
         Blocks.leatherBackpack,
-        Config.leatherBackpack::slots,
-        Config.leatherBackpack::upgradeSlots,
+        Config.leatherBackpack::inventorySlotCount,
+        Config.leatherBackpack::upgradeSlotCount,
         BackpackTier.LEATHER
     )
 
@@ -28,8 +29,8 @@ object Items {
     val backpackIron = BackpackItem(
         "backpack_iron",
         Blocks.ironBackpack,
-        Config.ironBackpack::slots,
-        Config.ironBackpack::upgradeSlots,
+        Config.ironBackpack::inventorySlotCount,
+        Config.ironBackpack::upgradeSlotCount,
         BackpackTier.IRON
     )
 
@@ -37,8 +38,8 @@ object Items {
     val backpackGold = BackpackItem(
         "backpack_gold",
         Blocks.goldBackpack,
-        Config.goldBackpack::slots,
-        Config.goldBackpack::upgradeSlots,
+        Config.goldBackpack::inventorySlotCount,
+        Config.goldBackpack::upgradeSlotCount,
         BackpackTier.GOLD
     )
 
@@ -46,8 +47,8 @@ object Items {
     val backpackDiamond = BackpackItem(
         "backpack_diamond",
         Blocks.diamondBackpack,
-        Config.diamondBackpack::slots,
-        Config.diamondBackpack::upgradeSlots,
+        Config.diamondBackpack::inventorySlotCount,
+        Config.diamondBackpack::upgradeSlotCount,
         BackpackTier.DIAMOND
     )
 
@@ -55,8 +56,8 @@ object Items {
     val backpackObsidian = BackpackItem(
         "backpack_obsidian",
         Blocks.obsidianBackpack,
-        Config.obsidianBackpack::slots,
-        Config.obsidianBackpack::upgradeSlots,
+        Config.obsidianBackpack::inventorySlotCount,
+        Config.obsidianBackpack::upgradeSlotCount,
         BackpackTier.OBSIDIAN
     )
 
@@ -171,4 +172,10 @@ object Items {
 
     @JvmField
     val anvilUpgrade = AnvilUpgradeItem("anvil_upgrade", ::AnvilUpgradeWrapper)
+
+    @JvmField
+    val mobCatcherUpgrade = MobCatcherUpgradeItem("mob_catcher_upgrade", false, ::MobCatcherUpgradeWrapper)
+
+    @JvmField
+    val advancedMobCatcherUpgrade = MobCatcherUpgradeItem("advanced_mob_catcher_upgrade", true, ::MobCatcherUpgradeWrapper)
 }

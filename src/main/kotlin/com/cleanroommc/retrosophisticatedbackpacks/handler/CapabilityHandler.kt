@@ -3,6 +3,8 @@ package com.cleanroommc.retrosophisticatedbackpacks.handler
 import com.cleanroommc.retrosophisticatedbackpacks.RetroSophisticatedBackpacks
 import com.cleanroommc.retrosophisticatedbackpacks.capability.BackpackWrapper
 import com.cleanroommc.retrosophisticatedbackpacks.capability.upgrade.*
+import com.cleanroommc.retrosophisticatedbackpacks.capability.upgrade.mobcatcher.MobCatcherUpgradeWrapper
+import com.cleanroommc.retrosophisticatedbackpacks.config.Config
 import it.unimi.dsi.fastutil.objects.Object2ObjectMap
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap
 import net.minecraft.nbt.NBTBase
@@ -210,6 +212,11 @@ object CapabilityHandler {
             ::AnvilUpgradeWrapper
         )
 
+        instance.register(
+            MobCatcherUpgradeWrapper::class.java,
+            CapabilityStorageProvider<MobCatcherUpgradeWrapper>()
+        ) { MobCatcherUpgradeWrapper() }
+
         // Interfaces
         instance.register(
             UpgradeWrapper::class.java,
@@ -324,6 +331,9 @@ object CapabilityHandler {
     }
 
     fun cacheBackpackInventory(backpackWrapper: BackpackWrapper) {
+        if (Config.tickDedupeLogicDisabled) {
+            return
+        }
         if (BACKPACK_INVENTORY_CACHE.containsKey(backpackWrapper.uuid)) {
             backpackWrapper.isCached = true
             return

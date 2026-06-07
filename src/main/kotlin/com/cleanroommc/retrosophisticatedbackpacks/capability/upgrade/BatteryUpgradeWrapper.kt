@@ -2,6 +2,7 @@ package com.cleanroommc.retrosophisticatedbackpacks.capability.upgrade
 
 import com.cleanroommc.retrosophisticatedbackpacks.capability.BackpackWrapper
 import com.cleanroommc.retrosophisticatedbackpacks.capability.Capabilities
+import com.cleanroommc.retrosophisticatedbackpacks.config.Config
 import com.cleanroommc.retrosophisticatedbackpacks.inventory.ExposedItemStackHandler
 import com.cleanroommc.retrosophisticatedbackpacks.item.BatteryUpgradeItem
 import com.cleanroommc.retrosophisticatedbackpacks.util.Utils.asTranslationKey
@@ -19,8 +20,6 @@ class BatteryUpgradeWrapper : UpgradeWrapper<BatteryUpgradeItem>(), IBatteryUpgr
         private const val INVENTORY_TAG = "Inventory"
         private const val INPUT_SLOT = 0
         private const val OUTPUT_SLOT = 1
-        private const val ENERGY_PER_ROW = 10000
-        private const val MAX_INPUT_OUTPUT_PER_ROW = 20
     }
 
     override val settingsLangKey = "gui.battery_settings".asTranslationKey()
@@ -41,10 +40,10 @@ class BatteryUpgradeWrapper : UpgradeWrapper<BatteryUpgradeItem>(), IBatteryUpgr
     }
 
     override fun getMaxEnergyStored(wrapper: BackpackWrapper): Int =
-        getMaxEnergyStored(wrapper, maxOf(1, wrapper.getTotalStackMultiplier()))
+        getMaxEnergyStored(wrapper, wrapper.getTotalStackMultiplier())
 
     override fun getMaxEnergyStored(wrapper: BackpackWrapper, stackMultiplier: Int): Int =
-        getSlotRows(wrapper) * ENERGY_PER_ROW * maxOf(1, stackMultiplier)
+        (getSlotRows(wrapper) * Config.batteryUpgrade.energyPerSlotRow * getAdjustedStackMultiplier(stackMultiplier)).toInt()
 
     override fun receiveEnergy(wrapper: BackpackWrapper, maxReceive: Int, simulate: Boolean): Int {
         val accepted = minOf(maxReceive, getMaxInOut(wrapper), getMaxEnergyStored(wrapper) - energyStored)
@@ -109,10 +108,13 @@ class BatteryUpgradeWrapper : UpgradeWrapper<BatteryUpgradeItem>(), IBatteryUpgr
     }
 
     private fun getMaxInOut(wrapper: BackpackWrapper): Int =
-        maxOf(1, getSlotRows(wrapper) * MAX_INPUT_OUTPUT_PER_ROW * maxOf(1, wrapper.getTotalStackMultiplier()))
+        maxOf(1, (getSlotRows(wrapper) * Config.batteryUpgrade.maxInputOutput * getAdjustedStackMultiplier(wrapper.getTotalStackMultiplier())).toInt())
 
     private fun getSlotRows(wrapper: BackpackWrapper): Int =
         maxOf(1, (wrapper.backpackInventorySize() + 8) / 9)
+
+    private fun getAdjustedStackMultiplier(stackMultiplier: Int): Double =
+        1.0 + Config.batteryUpgrade.stackMultiplierRatio * (stackMultiplier - 1)
 
     override fun serializeNBT(): NBTTagCompound {
         val nbt = super.serializeNBT()

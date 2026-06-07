@@ -6,7 +6,7 @@ import net.minecraft.item.ItemStack
 import net.minecraft.util.text.TextComponentTranslation
 import net.minecraft.world.World
 
-class StackUpgradeItem(registryName: String, val multiplier: () -> Int) : UpgradeItem(registryName) {
+class StackUpgradeItem(registryName: String, val multiplier: () -> Int) : UpgradeItem(registryName, upgradeGroup = "stack") {
     override fun addInformation(
         stack: ItemStack,
         worldIn: World?,

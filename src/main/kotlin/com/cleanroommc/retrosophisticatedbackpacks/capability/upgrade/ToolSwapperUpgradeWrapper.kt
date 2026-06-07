@@ -3,6 +3,7 @@ package com.cleanroommc.retrosophisticatedbackpacks.capability.upgrade
 import com.cleanroommc.retrosophisticatedbackpacks.capability.BackpackWrapper
 import com.cleanroommc.retrosophisticatedbackpacks.capability.Capabilities
 import com.cleanroommc.retrosophisticatedbackpacks.capability.upgrade.UpgradeFilterUtils.matchesAllowEmpty
+import com.cleanroommc.retrosophisticatedbackpacks.config.Config
 import com.cleanroommc.retrosophisticatedbackpacks.item.BackpackItem
 import com.cleanroommc.retrosophisticatedbackpacks.item.ToolSwapperUpgradeItem
 import com.cleanroommc.retrosophisticatedbackpacks.util.Utils.asTranslationKey
@@ -28,7 +29,8 @@ import java.util.LinkedList
 open class ToolSwapperUpgradeWrapper(
     private val hasSettingsTab: Boolean = false,
     private val swapToolOnKeyPress: Boolean = false,
-) : BasicUpgradeWrapper<ToolSwapperUpgradeItem>(8), IToolSwapperUpgrade {
+) : BasicUpgradeWrapper<ToolSwapperUpgradeItem>(Config.toolSwapperUpgrade.filterSlots, Config.toolSwapperUpgrade.slotsInRow),
+    IToolSwapperUpgrade {
     companion object {
         private const val SHOULD_SWAP_WEAPON_TAG = "ShouldSwapWeapon"
         private const val TOOL_SWAP_MODE_TAG = "ToolSwapMode"

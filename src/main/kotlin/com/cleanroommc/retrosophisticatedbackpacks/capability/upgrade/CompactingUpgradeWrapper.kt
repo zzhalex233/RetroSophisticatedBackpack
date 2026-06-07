@@ -3,6 +3,7 @@ package com.cleanroommc.retrosophisticatedbackpacks.capability.upgrade
 import com.cleanroommc.retrosophisticatedbackpacks.capability.BackpackWrapper
 import com.cleanroommc.retrosophisticatedbackpacks.capability.Capabilities
 import com.cleanroommc.retrosophisticatedbackpacks.capability.upgrade.UpgradeFilterUtils.matchesAllowEmpty
+import com.cleanroommc.retrosophisticatedbackpacks.config.Config
 import com.cleanroommc.retrosophisticatedbackpacks.item.CompactingUpgradeItem
 import com.cleanroommc.retrosophisticatedbackpacks.util.Utils.asTranslationKey
 import net.minecraft.item.ItemStack
@@ -11,7 +12,9 @@ import net.minecraft.util.EnumFacing
 import net.minecraft.world.World
 import net.minecraftforge.common.capabilities.Capability
 
-open class CompactingUpgradeWrapper : BasicUpgradeWrapper<CompactingUpgradeItem>(), ICompactingUpgrade {
+open class CompactingUpgradeWrapper :
+    BasicUpgradeWrapper<CompactingUpgradeItem>(Config.compactingUpgrade.filterSlots, Config.compactingUpgrade.slotsInRow),
+    ICompactingUpgrade {
     companion object {
         private const val COMPACT_NON_UNCRAFTABLE_TAG = "CompactNonUncraftable"
         private const val SHOULD_WORK_IN_GUI_TAG = "ShouldWorkInGui"
@@ -54,7 +57,9 @@ open class CompactingUpgradeWrapper : BasicUpgradeWrapper<CompactingUpgradeItem>
                 super<BasicUpgradeWrapper>.hasCapability(capability, facing)
 }
 
-class AdvancedCompactingUpgradeWrapper : AdvancedUpgradeWrapper<CompactingUpgradeItem>(), ICompactingUpgrade {
+class AdvancedCompactingUpgradeWrapper :
+    AdvancedUpgradeWrapper<CompactingUpgradeItem>(Config.advancedCompactingUpgrade.filterSlots, Config.advancedCompactingUpgrade.slotsInRow),
+    ICompactingUpgrade {
     companion object {
         private const val COMPACT_NON_UNCRAFTABLE_TAG = "CompactNonUncraftable"
         private const val SHOULD_WORK_IN_GUI_TAG = "ShouldWorkInGui"

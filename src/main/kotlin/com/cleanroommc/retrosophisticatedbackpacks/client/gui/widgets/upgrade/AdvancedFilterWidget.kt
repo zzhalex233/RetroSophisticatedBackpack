@@ -215,7 +215,7 @@ class AdvancedFilterWidget(
         filterSlots = mutableListOf<PhantomItemSlot>()
 
         val filterSlotCount = filterableWrapper.filterItems.slots
-        val slotsInRow = minOf(4, filterSlotCount)
+        val slotsInRow = if (filterSlotCount > 0) filterableWrapper.slotsInRow.coerceIn(1, filterSlotCount) else 1
         for (i in 0 until filterSlotCount) {
             val slot =
                 PhantomItemSlot().syncHandler("${syncKey}_$slotIndex", i).pos(i % slotsInRow * 18, i / slotsInRow * 18) as PhantomItemSlot
