@@ -3,10 +3,12 @@ package com.cleanroommc.retrosophisticatedbackpacks.client.gui.widgets
 import com.cleanroommc.modularui.api.drawable.IKey
 import com.cleanroommc.modularui.api.layout.IViewportStack
 import com.cleanroommc.modularui.api.widget.Interactable
+import com.cleanroommc.modularui.drawable.GuiDraw
 import com.cleanroommc.modularui.screen.RichTooltip
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext
 import com.cleanroommc.modularui.theme.WidgetThemeEntry
 import com.cleanroommc.modularui.widget.Widget
+import com.cleanroommc.retrosophisticatedbackpacks.Tags
 import com.cleanroommc.retrosophisticatedbackpacks.capability.upgrade.mobcatcher.CapturedMob
 import com.cleanroommc.retrosophisticatedbackpacks.capability.upgrade.mobcatcher.MobCatcherStorage
 import com.cleanroommc.retrosophisticatedbackpacks.client.gui.BackpackPanel
@@ -15,25 +17,34 @@ import com.cleanroommc.retrosophisticatedbackpacks.handler.NetworkHandler
 import com.cleanroommc.retrosophisticatedbackpacks.network.C2SMobCatcherReleasePacket
 import com.cleanroommc.retrosophisticatedbackpacks.util.Utils.asTranslationKey
 import net.minecraft.client.Minecraft
-import net.minecraft.client.gui.Gui
 import net.minecraft.client.renderer.GlStateManager
 import net.minecraft.client.renderer.OpenGlHelper
 import net.minecraft.client.renderer.RenderHelper
 import net.minecraft.entity.EntityLivingBase
 import net.minecraft.entity.EntityList
+import net.minecraft.util.ResourceLocation
 import net.minecraft.util.text.TextFormatting
+import org.lwjgl.opengl.GL11
 import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.sqrt
 
 class MobCatcherInventoryControlWidget(private val panel: BackpackPanel) :
     Widget<MobCatcherInventoryControlWidget>(), Interactable {
     companion object {
         private const val SLOT_SIZE = 18
-        private const val CAPTURED_MOB_BORDER_DARK = 0xFF171717.toInt()
-        private const val CAPTURED_MOB_BORDER_LIGHT = 0xFF5A5A5A.toInt()
-        private const val CAPTURED_MOB_BACKGROUND = 0xFF2B2B2B.toInt()
-        private const val CAPTURED_MOB_BACKGROUND_ALT = 0xFF353535.toInt()
+        private const val CAPTURED_MOB_SLOT_OFFSET = 1
+        private val GUI_CONTROLS = ResourceLocation(Tags.MOD_ID, "textures/gui/gui_controls.png")
+        private const val GUI_CONTROLS_TEXTURE_WIDTH = 256
+        private const val GUI_CONTROLS_TEXTURE_HEIGHT = 256
+        private const val CAPTURED_MOB_BACKGROUND_U = 29
+        private const val CAPTURED_MOB_BACKGROUND_V = 30
+        private const val CAPTURED_MOB_BACKGROUND_WIDTH = 18
+        private const val CAPTURED_MOB_BACKGROUND_HEIGHT = 54
+        private const val CAPTURED_MOB_BACKGROUND_COLOR = 0xFF2B2B2B.toInt()
+        private const val CAPTURED_MOB_BACKGROUND_LAYER_COLOR = 0x184A4A4A
+        private const val BODY_YAW_RANGE = 50f
         private const val HEAD_STATIC_YAW_RANGE = 24f
         private const val HEAD_IDLE_YAW_AMPLITUDE = 33f
         private const val HEAD_STATIC_PITCH_RANGE = 6f
@@ -90,20 +101,30 @@ class MobCatcherInventoryControlWidget(private val panel: BackpackPanel) :
         panel.backpackWrapper.ensureCapturedMobLayoutCurrent()
         val theme = widgetTheme.theme
         val hoveredMob = hoveredCapturedMob(context.mouseX, context.mouseY)
-        for (capturedMob in MobCatcherStorage.getCapturedMobs(panel.backpackWrapper)) {
-            val slotX = capturedMob.slot % panel.rowSize * SLOT_SIZE
-            val slotY = capturedMob.slot / panel.rowSize * SLOT_SIZE
-            val width = capturedMob.width * SLOT_SIZE
-            val height = capturedMob.height * SLOT_SIZE
-            renderCapturedMobArea(slotX, slotY, capturedMob.width, capturedMob.height)
-            renderEntity(capturedMob)?.let { entity ->
+        val capturedMobs = MobCatcherStorage.getCapturedMobs(panel.backpackWrapper)
+            .filter { isValidBackpackSlot(it.slot) }
+            .map { capturedMob ->
+                CapturedMobRenderInfo(
+                    capturedMob,
+                    slotX(capturedMob.slot),
+                    slotY(capturedMob.slot),
+                    capturedMob.width * SLOT_SIZE,
+                    capturedMob.height * SLOT_SIZE
+                )
+            }
+
+        for (renderInfo in capturedMobs) {
+            renderCapturedMobArea(renderInfo.x, renderInfo.y, renderInfo.capturedMob.width, renderInfo.capturedMob.height)
+        }
+        for (renderInfo in capturedMobs) {
+            renderEntity(renderInfo.capturedMob)?.let { entity ->
                 val state = EntityRenderState.capture(entity)
                 try {
-                    prepareEntityForRender(entity, capturedMob, context)
-                    val scale = getRenderScale(entity, width, height)
+                    prepareEntityForRender(entity, renderInfo.capturedMob, context)
+                    val scale = getRenderScale(entity, renderInfo.width, renderInfo.height)
                     renderEntityInInventory(
-                        slotX + width / 2,
-                        getRenderBottomY(entity, slotY, height, scale),
+                        renderInfo.x + renderInfo.width / 2,
+                        getRenderBottomY(entity, renderInfo.y, renderInfo.height, scale),
                         scale,
                         entity,
                         context.partialTicks
@@ -112,35 +133,173 @@ class MobCatcherInventoryControlWidget(private val panel: BackpackPanel) :
                     state.restore(entity)
                 }
             }
-            if (hoveredMob?.id == capturedMob.id) {
-                RSBTextures.SOLID_DOWN_ARROW_ICON.draw(context, slotX + width - 14, slotY + height - 14, 12, 12, theme)
-            }
+        }
+        capturedMobs.firstOrNull { hoveredMob?.id == it.capturedMob.id }?.let {
+            RSBTextures.SOLID_DOWN_ARROW_ICON.draw(context, it.x + it.width - 14, it.y + it.height - 14, 12, 12, theme)
         }
     }
 
     private fun renderCapturedMobArea(x: Int, y: Int, widthSlots: Int, heightSlots: Int) {
-        val backgroundX = x
-        val backgroundY = y
+        val backgroundX = x - 1
+        val backgroundY = y - 1
         val width = widthSlots * SLOT_SIZE
         val height = heightSlots * SLOT_SIZE
-        GlStateManager.disableLighting()
-        GlStateManager.disableDepth()
+        renderTiledControlBackground(
+            backgroundX,
+            backgroundY,
+            width,
+            height,
+            CAPTURED_MOB_BACKGROUND_U,
+            CAPTURED_MOB_BACKGROUND_V,
+            CAPTURED_MOB_BACKGROUND_WIDTH,
+            CAPTURED_MOB_BACKGROUND_HEIGHT
+        )
+        renderCapturedMobBackgroundLayers(backgroundX + 1, backgroundY + 1, width - 2, height - 2)
+    }
+
+    private fun renderCapturedMobBackgroundLayers(x: Int, y: Int, width: Int, height: Int) {
+        GuiDraw.drawRect(x.toFloat(), y.toFloat(), width.toFloat(), height.toFloat(), CAPTURED_MOB_BACKGROUND_COLOR)
+        val layers = max(1, min(5, min(width, height) / 5))
+        for (layer in 0 until layers) {
+            val insetX = 1 + layer * width / (layers * 3)
+            val insetY = 1 + layer * height / (layers * 3)
+            val alpha = 24 + layer * 12
+            val color = (alpha shl 24) or (CAPTURED_MOB_BACKGROUND_LAYER_COLOR and 0x00FFFFFF)
+            GuiDraw.drawRect(
+                (x + insetX).toFloat(),
+                (y + insetY).toFloat(),
+                (width - insetX * 2).toFloat(),
+                (height - insetY * 2).toFloat(),
+                color
+            )
+        }
+        restoreTexturedGuiState()
+    }
+
+    private fun restoreTexturedGuiState() {
+        GlStateManager.enableTexture2D()
+        GlStateManager.enableAlpha()
+        GlStateManager.disableBlend()
         GlStateManager.color(1f, 1f, 1f, 1f)
-        Gui.drawRect(backgroundX, backgroundY, backgroundX + width, backgroundY + height, CAPTURED_MOB_BORDER_DARK)
-        Gui.drawRect(backgroundX + 1, backgroundY + 1, backgroundX + width - 1, backgroundY + height - 1, CAPTURED_MOB_BACKGROUND)
-        Gui.drawRect(backgroundX + 2, backgroundY + 2, backgroundX + width - 2, backgroundY + height - 2, CAPTURED_MOB_BACKGROUND_ALT)
-        Gui.drawRect(backgroundX + 1, backgroundY + 1, backgroundX + width - 1, backgroundY + 2, CAPTURED_MOB_BORDER_LIGHT)
-        Gui.drawRect(backgroundX + 1, backgroundY + 1, backgroundX + 2, backgroundY + height - 1, CAPTURED_MOB_BORDER_LIGHT)
-        Gui.drawRect(backgroundX + 1, backgroundY + height - 2, backgroundX + width - 1, backgroundY + height - 1, CAPTURED_MOB_BORDER_DARK)
-        Gui.drawRect(backgroundX + width - 2, backgroundY + 1, backgroundX + width - 1, backgroundY + height - 1, CAPTURED_MOB_BORDER_DARK)
+    }
+
+    private fun renderTiledControlBackground(
+        x: Int,
+        y: Int,
+        width: Int,
+        height: Int,
+        u: Int,
+        v: Int,
+        textureWidth: Int,
+        textureHeight: Int
+    ) {
+        val leftWidth = 1
+        val topHeight = 1
+        val rightWidth = min(1, width - leftWidth)
+        val bottomHeight = min(1, height - topHeight)
+        val sourceRightU = u + textureWidth - rightWidth
+        val sourceBottomV = v + textureHeight - bottomHeight
+        val centerWidth = width - leftWidth - rightWidth
+        val centerHeight = height - topHeight - bottomHeight
+        val sourceCenterWidth = textureWidth - leftWidth - rightWidth
+        val sourceCenterHeight = textureHeight - topHeight - bottomHeight
+
         GlStateManager.color(1f, 1f, 1f, 1f)
+        drawGuiControlsTexture(x, y, leftWidth, topHeight, u, v)
+        drawGuiControlsTexture(x + leftWidth + centerWidth, y, rightWidth, topHeight, sourceRightU, v)
+        drawGuiControlsTexture(x, y + topHeight + centerHeight, leftWidth, bottomHeight, u, sourceBottomV)
+        drawGuiControlsTexture(
+            x + leftWidth + centerWidth,
+            y + topHeight + centerHeight,
+            rightWidth,
+            bottomHeight,
+            sourceRightU,
+            sourceBottomV
+        )
+        renderTiledTexture(x + leftWidth, y, centerWidth, topHeight, u + leftWidth, v, sourceCenterWidth, topHeight)
+        renderTiledTexture(
+            x + leftWidth,
+            y + topHeight + centerHeight,
+            centerWidth,
+            bottomHeight,
+            u + leftWidth,
+            sourceBottomV,
+            sourceCenterWidth,
+            bottomHeight
+        )
+        renderTiledTexture(x, y + topHeight, leftWidth, centerHeight, u, v + topHeight, leftWidth, sourceCenterHeight)
+        renderTiledTexture(
+            x + leftWidth + centerWidth,
+            y + topHeight,
+            rightWidth,
+            centerHeight,
+            sourceRightU,
+            v + topHeight,
+            rightWidth,
+            sourceCenterHeight
+        )
+        renderTiledTexture(
+            x + leftWidth,
+            y + topHeight,
+            centerWidth,
+            centerHeight,
+            u + leftWidth,
+            v + topHeight,
+            sourceCenterWidth,
+            sourceCenterHeight
+        )
+    }
+
+    private fun renderTiledTexture(
+        x: Int,
+        y: Int,
+        width: Int,
+        height: Int,
+        u: Int,
+        v: Int,
+        textureWidth: Int,
+        textureHeight: Int
+    ) {
+        if (width <= 0 || height <= 0 || textureWidth <= 0 || textureHeight <= 0) {
+            return
+        }
+        var renderedY = 0
+        while (renderedY < height) {
+            val chunkHeight = min(textureHeight, height - renderedY)
+            var renderedX = 0
+            while (renderedX < width) {
+                val chunkWidth = min(textureWidth, width - renderedX)
+                drawGuiControlsTexture(x + renderedX, y + renderedY, chunkWidth, chunkHeight, u, v)
+                renderedX += chunkWidth
+            }
+            renderedY += chunkHeight
+        }
+    }
+
+    private fun drawGuiControlsTexture(x: Int, y: Int, width: Int, height: Int, u: Int, v: Int) {
+        if (width <= 0 || height <= 0) {
+            return
+        }
+        GuiDraw.drawTexture(
+            GUI_CONTROLS,
+            x.toFloat(),
+            y.toFloat(),
+            width.toFloat(),
+            height.toFloat(),
+            u,
+            v,
+            GUI_CONTROLS_TEXTURE_WIDTH,
+            GUI_CONTROLS_TEXTURE_HEIGHT
+        )
     }
 
     private fun renderEntityInInventory(posX: Int, posY: Float, scale: Int, entity: EntityLivingBase, partialTicks: Float) {
         val renderManager = Minecraft.getMinecraft().renderManager
         val previousViewY = renderManager.playerViewY
         val previousShadow = renderManager.isRenderShadow
-        GlStateManager.color(1f, 1f, 1f, 1f)
+        val previousBrightnessX = OpenGlHelper.lastBrightnessX
+        val previousBrightnessY = OpenGlHelper.lastBrightnessY
+        restoreTexturedGuiState()
         GlStateManager.enableColorMaterial()
         GlStateManager.enableDepth()
         GlStateManager.pushMatrix()
@@ -148,9 +307,8 @@ class MobCatcherInventoryControlWidget(private val panel: BackpackPanel) :
             GlStateManager.translate(posX.toFloat(), posY, 50f)
             GlStateManager.scale((-scale).toFloat(), scale.toFloat(), scale.toFloat())
             GlStateManager.rotate(180f, 0f, 0f, 1f)
-            GlStateManager.rotate(135f, 0f, 1f, 0f)
-            RenderHelper.enableStandardItemLighting()
-            GlStateManager.rotate(-135f, 0f, 1f, 0f)
+            OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, 220f, 220f)
+            enableFrontEntityLighting()
             GlStateManager.disableCull()
             renderManager.setPlayerViewY(180f)
             renderManager.setRenderShadow(false)
@@ -161,24 +319,55 @@ class MobCatcherInventoryControlWidget(private val panel: BackpackPanel) :
             GlStateManager.popMatrix()
             GlStateManager.enableCull()
             RenderHelper.disableStandardItemLighting()
+            OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, previousBrightnessX, previousBrightnessY)
             GlStateManager.disableRescaleNormal()
             GlStateManager.setActiveTexture(OpenGlHelper.lightmapTexUnit)
             GlStateManager.disableTexture2D()
             GlStateManager.setActiveTexture(OpenGlHelper.defaultTexUnit)
             GlStateManager.disableDepth()
-            GlStateManager.color(1f, 1f, 1f, 1f)
+            restoreTexturedGuiState()
         }
+    }
+
+    private fun enableFrontEntityLighting() {
+        GlStateManager.enableLighting()
+        GlStateManager.enableLight(0)
+        GlStateManager.enableLight(1)
+        GlStateManager.enableColorMaterial()
+        GlStateManager.colorMaterial(GL11.GL_FRONT_AND_BACK, GL11.GL_AMBIENT_AND_DIFFUSE)
+        setFrontEntityLight(GL11.GL_LIGHT0, 0f, 0.65f, 1f, 0.55f)
+        setFrontEntityLight(GL11.GL_LIGHT1, 0f, -0.25f, 1f, 0.35f)
+        GlStateManager.shadeModel(GL11.GL_FLAT)
+        GlStateManager.glLightModel(GL11.GL_LIGHT_MODEL_AMBIENT, RenderHelper.setColorBuffer(0.32f, 0.32f, 0.32f, 1f))
+    }
+
+    private fun setFrontEntityLight(light: Int, x: Float, y: Float, z: Float, diffuse: Float) {
+        val length = sqrt((x * x + y * y + z * z).toDouble()).toFloat().takeIf { it > 0f } ?: 1f
+        GlStateManager.glLight(light, GL11.GL_POSITION, RenderHelper.setColorBuffer(x / length, y / length, z / length, 0f))
+        GlStateManager.glLight(light, GL11.GL_DIFFUSE, RenderHelper.setColorBuffer(diffuse, diffuse, diffuse, 1f))
+        GlStateManager.glLight(light, GL11.GL_AMBIENT, RenderHelper.setColorBuffer(0f, 0f, 0f, 1f))
+        GlStateManager.glLight(light, GL11.GL_SPECULAR, RenderHelper.setColorBuffer(0f, 0f, 0f, 1f))
     }
 
     private fun hoveredCapturedMob(mouseX: Int, mouseY: Int): CapturedMob? {
         panel.backpackWrapper.ensureCapturedMobLayoutCurrent()
         return MobCatcherStorage.getCapturedMobs(panel.backpackWrapper).firstOrNull { capturedMob ->
-            val x = capturedMob.slot % panel.rowSize * SLOT_SIZE
-            val y = capturedMob.slot / panel.rowSize * SLOT_SIZE
+            if (!isValidBackpackSlot(capturedMob.slot)) {
+                return@firstOrNull false
+            }
+            val x = slotX(capturedMob.slot) - 1
+            val y = slotY(capturedMob.slot) - 1
             mouseX >= x && mouseX < x + capturedMob.width * SLOT_SIZE &&
                     mouseY >= y && mouseY < y + capturedMob.height * SLOT_SIZE
         }
     }
+
+    private fun isValidBackpackSlot(slot: Int): Boolean =
+        slot in 0 until panel.backpackWrapper.backpackInventorySize()
+
+    private fun slotX(slot: Int): Int = slot % panel.rowSize * SLOT_SIZE + CAPTURED_MOB_SLOT_OFFSET
+
+    private fun slotY(slot: Int): Int = slot / panel.rowSize * SLOT_SIZE + CAPTURED_MOB_SLOT_OFFSET
 
     private fun renderEntity(capturedMob: CapturedMob): EntityLivingBase? {
         renderEntities[capturedMob.id]?.let { return it }
@@ -200,7 +389,7 @@ class MobCatcherInventoryControlWidget(private val panel: BackpackPanel) :
         val renderTime = renderTime(capturedMob, context)
         resetCapturedEntityVisualState(entity)
         entity.setLocationAndAngles(0.0, 0.0, 0.0, 0f, 0f)
-        val bodyRot = 0f
+        val bodyRot = (uuidFloat(capturedMob.id, 0) - 0.5f) * BODY_YAW_RANGE
         val headOffset = -HEAD_STATIC_YAW_RANGE / 2f + uuidFloat(capturedMob.id, 1) * HEAD_STATIC_YAW_RANGE +
                 idlePoseOffset(capturedMob.id, renderTime, 0, HEAD_IDLE_YAW_AMPLITUDE)
         val pitch = -HEAD_STATIC_PITCH_RANGE / 2f + uuidFloat(capturedMob.id, 2) * HEAD_STATIC_PITCH_RANGE +
@@ -327,4 +516,12 @@ class MobCatcherInventoryControlWidget(private val panel: BackpackPanel) :
                 )
         }
     }
+
+    private data class CapturedMobRenderInfo(
+        val capturedMob: CapturedMob,
+        val x: Int,
+        val y: Int,
+        val width: Int,
+        val height: Int
+    )
 }

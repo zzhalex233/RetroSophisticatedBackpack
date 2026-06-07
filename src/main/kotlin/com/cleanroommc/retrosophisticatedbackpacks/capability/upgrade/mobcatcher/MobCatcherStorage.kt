@@ -30,6 +30,7 @@ object MobCatcherStorage {
     private const val FOOTPRINT_ASPECT_WIDENING = 1.4
     private const val FOOTPRINT_ASPECT_WEIGHT = 10.0
     private const val FOOTPRINT_OVERFILL_WEIGHT = 0.75
+    private const val FOOTPRINT_SCORE_EPSILON = 0.001
     private const val MOB_PART_PREFIX = "mob:"
     private const val STACK_PART_PREFIX = "stack:"
     private const val FIXED_PART_PREFIX = "fixed:"
@@ -269,13 +270,14 @@ object MobCatcherStorage {
         val entityWidth = maxOf(entity.width.toDouble(), 0.25)
         val entityHeight = maxOf(entity.height.toDouble(), 0.25)
         val targetAspect = entityWidth / entityHeight * FOOTPRINT_ASPECT_WIDENING
-        var best = CapturedMobFootprint(1, maxOf(1, slotCost))
+        val maxSlotCost = maxOf(1, slotCost)
+        var best = CapturedMobFootprint(1, maxSlotCost)
         var bestScore = Double.MAX_VALUE
         var bestAspectError = Double.MAX_VALUE
         var bestOverfill = Int.MAX_VALUE
 
-        for (width in 1..slotCost) {
-            for (height in 1..slotCost) {
+        for (width in 1..maxSlotCost) {
+            for (height in 1..maxSlotCost) {
                 val area = width * height
                 if (area < slotCost) {
                     continue
@@ -284,18 +286,18 @@ object MobCatcherStorage {
                 val aspectError = abs(ln(aspect / targetAspect))
                 val overfill = area - slotCost
                 val score = aspectError * FOOTPRINT_ASPECT_WEIGHT + overfill * FOOTPRINT_OVERFILL_WEIGHT
-                val isBetter = score < bestScore ||
-                        score == bestScore && (
-                        aspectError < bestAspectError ||
-                                aspectError == bestAspectError && (
-                                width > best.width ||
-                                        width == best.width && (
-                                        height < best.height ||
-                                                height == best.height && overfill < bestOverfill
-                                        )
-                                )
-                        )
-                if (isBetter) {
+                if (isBetterFootprint(
+                        score,
+                        aspectError,
+                        overfill,
+                        width,
+                        height,
+                        bestScore,
+                        bestAspectError,
+                        bestOverfill,
+                        best
+                    )
+                ) {
                     best = CapturedMobFootprint(width, height)
                     bestScore = score
                     bestAspectError = aspectError
@@ -304,6 +306,26 @@ object MobCatcherStorage {
             }
         }
         return best
+    }
+
+    private fun isBetterFootprint(
+        score: Double,
+        aspectError: Double,
+        overfill: Int,
+        width: Int,
+        height: Int,
+        bestScore: Double,
+        bestAspectError: Double,
+        bestOverfill: Int,
+        best: CapturedMobFootprint
+    ): Boolean {
+        if (score < bestScore - FOOTPRINT_SCORE_EPSILON) return true
+        if (score > bestScore + FOOTPRINT_SCORE_EPSILON) return false
+        if (aspectError < bestAspectError - FOOTPRINT_SCORE_EPSILON) return true
+        if (aspectError > bestAspectError + FOOTPRINT_SCORE_EPSILON) return false
+        if (width != best.width) return width > best.width
+        if (height != best.height) return height < best.height
+        return overfill < bestOverfill
     }
 
     fun getColumns(backpackWrapper: BackpackWrapper): Int {
