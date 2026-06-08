@@ -198,7 +198,7 @@ class BackpackItem(
         entityLiving: EntityLivingBase,
         itemStack: ItemStack,
         armorSlot: EntityEquipmentSlot,
-        _default: ModelBiped
+        default: ModelBiped
     ): ModelBiped? {
         if (armorSlot == EntityEquipmentSlot.CHEST) {
             val model = if (cachedBipedModel != null) cachedBipedModel
@@ -207,7 +207,7 @@ class BackpackItem(
                 cachedBipedModel
             }
 
-            model?.setModelAttributes(_default)
+            model?.setModelAttributes(default)
             return model
         }
 
@@ -215,7 +215,7 @@ class BackpackItem(
     }
 
     override fun getNBTShareTag(stack: ItemStack): NBTTagCompound? {
-        var nbt = super.getNBTShareTag(stack)
+        var nbt = super.getNBTShareTag(stack)?.copy()
         val wrapper = stack.getCapability(Capabilities.BACKPACK_CAPABILITY, null) ?: return nbt
 
         if (nbt != null) nbt.setTag("BackpackCapability", wrapper.serializeNBT())

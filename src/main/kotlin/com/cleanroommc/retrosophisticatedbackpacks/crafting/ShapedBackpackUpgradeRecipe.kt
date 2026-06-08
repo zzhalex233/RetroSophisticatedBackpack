@@ -30,9 +30,9 @@ class ShapedBackpackUpgradeRecipe(
 
             for (i in 0 until backpackWrapper.backpackInventorySize()) {
                 newBackpackWrapper.backpackItemStackHandler.inventory[i] =
-                    backpackWrapper.backpackItemStackHandler.inventory[i]
+                    backpackWrapper.backpackItemStackHandler.inventory[i].copy()
                 newBackpackWrapper.backpackItemStackHandler.memorizedSlotStack[i] =
-                    backpackWrapper.backpackItemStackHandler.memorizedSlotStack[i]
+                    backpackWrapper.backpackItemStackHandler.memorizedSlotStack[i].copy()
                 newBackpackWrapper.backpackItemStackHandler.sortLockedSlots[i] =
                     backpackWrapper.backpackItemStackHandler.sortLockedSlots[i]
             }
@@ -43,7 +43,7 @@ class ShapedBackpackUpgradeRecipe(
 
             for (i in 0 until backpackWrapper.upgradeSlotsSize()) {
                 newBackpackWrapper.upgradeItemStackHandler.inventory[i] =
-                    backpackWrapper.upgradeItemStackHandler.inventory[i]
+                    backpackWrapper.upgradeItemStackHandler.inventory[i].copy()
             }
         }
 
