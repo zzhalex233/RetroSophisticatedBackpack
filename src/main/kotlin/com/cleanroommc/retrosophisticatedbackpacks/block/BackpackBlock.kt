@@ -107,7 +107,7 @@ class BackpackBlock(
         }
 
     override fun createBlockState(): BlockStateContainer =
-        BlockStateContainer(this, *arrayOf(LEFT_TANK, RIGHT_TANK, BATTERY, FACING))
+        BlockStateContainer(this, LEFT_TANK, RIGHT_TANK, BATTERY, FACING)
 
     override fun getStateForPlacement(
         world: World,
@@ -242,7 +242,9 @@ class BackpackBlock(
         val tileEntityBackpackInventory = tileEntity.getCapability(Capabilities.BACKPACK_CAPABILITY, null) ?: return
         val stackBackpackInventory = stack.getCapability(Capabilities.BACKPACK_CAPABILITY, null) ?: return
         stackBackpackInventory.deserializeNBT(tileEntityBackpackInventory.serializeNBT())
-        stack.setStackDisplayName(tileEntity.name)
+        
+        if (tileEntity.hasCustomName())
+            stack.setStackDisplayName(tileEntity.name)
 
         drops.add(stack)
     }
