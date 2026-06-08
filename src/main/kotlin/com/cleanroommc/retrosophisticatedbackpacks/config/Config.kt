@@ -9,7 +9,25 @@ object Config {
     @Config.Comment("Items that cannot be stored in backpack")
     @Config.RequiresMcRestart
     var blacklistedItems = arrayOf<String>()
-    
+
+    @JvmField
+    @Config.Comment(
+        "Entities that spawn with backpack equipped.",
+        "Only entities that have chest armor slot will be able to spawn with a backpack equipped.",
+    )
+    var backpackEntitySpawnList = arrayOf(
+        "minecraft:zombie",
+        "minecraft:skeleton",
+        "minecraft:husk",
+        "minecraft:stray",
+        "minecraft:wither_skeleton",
+        "minecraft:zombie_pigman",
+        "minecraft:wither_skeleton",
+    )
+
+    @JvmField
+    var baseBackpackSpawnChance = 0.03f
+
     @JvmField
     val leatherBackpack = LeatherBackpackConfig()
 
@@ -36,6 +54,12 @@ object Config {
         @JvmField
         @Config.RequiresMcRestart
         var upgradeSlots = 1
+
+        @JvmField
+        var spawnChanceOnMob = 0.05f
+
+        @JvmField
+        val dropChance = 1f
     }
 
     class IronBackpackConfig {
@@ -46,6 +70,12 @@ object Config {
         @JvmField
         @Config.RequiresMcRestart
         var upgradeSlots = 2
+
+        @JvmField
+        var spawnChanceOnMob = 0.04f
+
+        @JvmField
+        val dropChance = 1f
     }
 
     class GoldBackpackConfig {
@@ -56,6 +86,12 @@ object Config {
         @JvmField
         @Config.RequiresMcRestart
         var upgradeSlots = 3
+
+        @JvmField
+        var spawnChanceOnMob = 0.03f
+
+        @JvmField
+        val dropChance = 1f
     }
 
     class DiamondBackpackConfig {
@@ -66,6 +102,12 @@ object Config {
         @JvmField
         @Config.RequiresMcRestart
         var upgradeSlots = 5
+
+        @JvmField
+        var spawnChanceOnMob = 0.02f
+
+        @JvmField
+        val dropChance = 1f
     }
 
     class ObsidianBackpackConfig {
@@ -76,6 +118,12 @@ object Config {
         @JvmField
         @Config.RequiresMcRestart
         var upgradeSlots = 7
+
+        @JvmField
+        var spawnChanceOnMob = 0.01f
+
+        @JvmField
+        val dropChance = 1f
     }
 
     class StackUpgradeConfig {

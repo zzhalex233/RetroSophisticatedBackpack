@@ -283,6 +283,10 @@ class BackpackItem(
         val wrapper = stack.getCapability(Capabilities.BACKPACK_CAPABILITY, null)!!
         val slotIndex = if (data.inventoryType == InventoryType.PLAYER_INVENTORY) data.slotIndex else null
         uiSettings.customContainer { BackpackContainer(wrapper, slotIndex) }
+        uiSettings.canInteractWith { 
+            if (data.targetEntity.isDead) false
+            else it.getDistance(data.targetEntity) <= 4.0
+        }
         val holder = BackpackGuiHolder.ItemStackGuiHolder(wrapper)
         return holder.buildUI(data, syncManager, uiSettings)
     }

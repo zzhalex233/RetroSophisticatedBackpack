@@ -24,7 +24,7 @@ class C2SOpenBackpackPacket() : IRefinedMessage {
         slotIndex = buf.readInt()
     }
 
-    class Handler() : INoReplyMessageHandler<C2SOpenBackpackPacket> {
+    class Handler : INoReplyMessageHandler<C2SOpenBackpackPacket> {
         override fun onMessage(
             message: C2SOpenBackpackPacket,
             ctx: MessageContext
@@ -33,7 +33,7 @@ class C2SOpenBackpackPacket() : IRefinedMessage {
             val world = player.serverWorld
 
             world.addScheduledTask {
-                PlayerInventoryGuiFactory.open(player, message.inventoryType, message.slotIndex)
+                PlayerInventoryGuiFactory.open(player, player, message.inventoryType, message.slotIndex)
             }
 
             return null

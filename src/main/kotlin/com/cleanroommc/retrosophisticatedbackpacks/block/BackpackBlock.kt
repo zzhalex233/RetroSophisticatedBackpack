@@ -154,9 +154,8 @@ class BackpackBlock(
         return meta
     }
 
-    override fun getPushReaction(state: IBlockState): EnumPushReaction {
-        return EnumPushReaction.DESTROY
-    }
+    override fun getPushReaction(state: IBlockState): EnumPushReaction =
+        EnumPushReaction.DESTROY
 
     override fun hasComparatorInputOverride(state: IBlockState): Boolean =
         true

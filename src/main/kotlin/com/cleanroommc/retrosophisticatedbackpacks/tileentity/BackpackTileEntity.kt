@@ -91,6 +91,7 @@ class BackpackTileEntity(val wrapper: BackpackWrapper = BackpackWrapper()) :
         val backpackInv = getCapability(Capabilities.BACKPACK_CAPABILITY, null)!!
         val containerSupplier = { BackpackContainer(backpackInv, null) }
         uiSettings.customContainer(containerSupplier)
+        uiSettings.canInteractWith(::isUsableByPlayer)
         val holder: BackpackGuiHolder.TileEntityGuiHolder = BackpackGuiHolder.TileEntityGuiHolder(backpackInv)
         return holder.buildUI(data, syncManager, uiSettings)
     }
