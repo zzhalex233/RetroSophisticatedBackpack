@@ -2,6 +2,7 @@ package com.cleanroommc.retrosophisticatedbackpacks.backpack
 
 import com.cleanroommc.retrosophisticatedbackpacks.capability.BackpackWrapper
 import com.cleanroommc.retrosophisticatedbackpacks.capability.Capabilities
+import com.cleanroommc.retrosophisticatedbackpacks.config.Config
 import com.cleanroommc.retrosophisticatedbackpacks.item.BackpackItem
 import net.minecraft.entity.Entity
 import net.minecraft.inventory.IInventory
@@ -40,7 +41,7 @@ object BackpackInventoryHelper {
 
             val isMemorizedSlot = wrapper.isSlotMemorized(i)
             val baseStack = wrapper.getStackInSlot(i)
-            val maxSize = baseStack.maxStackSize * wrapper.getTotalStackMultiplier()
+            val maxSize = wrapper.getStackLimit(baseStack)
 
             for (j in i + 1 until wrapper.backpackInventorySize()) {
                 if (isMemorizedSlot != wrapper.isSlotMemorized(j) || wrapper.isSlotLocked(j))
@@ -123,6 +124,11 @@ object BackpackInventoryHelper {
     ) {
         for (i in 9 until playerInventory.slots) {
             var stack = playerInventory.getStackInSlot(i)
+            if (stack.isEmpty)
+                continue
+
+            if (transferMatched && !backpackContainsOrMemory(wrapper, stack))
+                continue
 
             if (stack.item is BackpackItem) {
                 val currentBackpackWrapper = stack.getCapability(Capabilities.BACKPACK_CAPABILITY, null)
@@ -134,13 +140,11 @@ object BackpackInventoryHelper {
                     continue
             }
 
+            stack = wrapper.backpackItemStackHandler.insertItemToMemorySlots(stack, false)
             for (j in 0 until wrapper.backpackInventorySize()) {
-                stack = wrapper.backpackItemStackHandler.insertItemToMemorySlots(stack, false)
-
-                if (transferMatched && wrapper.getStackInSlot(j).isEmpty)
-                    continue
-
                 stack = wrapper.insertItem(j, stack, false)
+                if (stack.isEmpty)
+                    break
             }
 
             playerInventory.setStackInSlot(i, stack)
@@ -154,19 +158,45 @@ object BackpackInventoryHelper {
     ) {
         for (i in 0 until wrapper.backpackInventorySize()) {
             var stack = wrapper.getStackInSlot(i)
+            if (stack.isEmpty)
+                continue
 
-            for (j in 9 until playerInventory.slots) {
-                if (transferMatched && playerInventory.getStackInSlot(j).isEmpty)
-                    continue
+            if (transferMatched && !handlerContains(playerInventory, stack, 0))
+                continue
 
+            val firstSlot = if (transferMatched) 0 else 9
+            for (j in firstSlot until playerInventory.slots) {
                 stack = playerInventory.insertItem(j, stack, false)
+                if (stack.isEmpty)
+                    break
             }
 
             wrapper.backpackItemStackHandler.setStackInSlot(i, stack)
         }
     }
 
+    private fun backpackContainsOrMemory(wrapper: BackpackWrapper, stack: ItemStack): Boolean =
+        handlerContains(wrapper.backpackItemStackHandler, stack, 0) ||
+                wrapper.backpackItemStackHandler.memorizedSlotStack.any { matchesStackKey(it, stack) }
+
+    private fun handlerContains(handler: IItemHandler, stack: ItemStack, firstSlot: Int): Boolean {
+        for (slot in firstSlot until handler.slots) {
+            if (matchesStackKey(handler.getStackInSlot(slot), stack)) {
+                return true
+            }
+        }
+        return false
+    }
+
+    private fun matchesStackKey(first: ItemStack, second: ItemStack): Boolean =
+        !first.isEmpty && !second.isEmpty &&
+                ItemStack.areItemsEqual(first, second) &&
+                ItemStack.areItemStackTagsEqual(first, second)
+
     fun attemptDepositOnTileEntity(wrapper: BackpackWrapper, destination: TileEntity, facing: EnumFacing): Boolean {
+        if (Config.isInteractionBlockDisallowed(destination.blockType)) {
+            return false
+        }
         val destination = getHandler(destination, facing) ?: return false
         return attemptDepositOnItemHandler(wrapper, destination)
     }
@@ -204,6 +234,9 @@ object BackpackInventoryHelper {
     }
 
     fun attemptRestockFromTileEntity(wrapper: BackpackWrapper, source: TileEntity, facing: EnumFacing): Boolean {
+        if (Config.isInteractionBlockDisallowed(source.blockType)) {
+            return false
+        }
         val source = getHandler(source, facing) ?: return false
         return attemptRestockFromItemHandler(wrapper, source)
     }

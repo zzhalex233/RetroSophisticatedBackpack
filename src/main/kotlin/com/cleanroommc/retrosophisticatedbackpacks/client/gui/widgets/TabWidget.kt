@@ -10,6 +10,7 @@ import com.cleanroommc.modularui.widget.SingleChildWidget
 import com.cleanroommc.modularui.widget.sizer.Unit
 import com.cleanroommc.retrosophisticatedbackpacks.util.Utils.getThemeOrDefault
 import com.cleanroommc.retrosophisticatedbackpacks.util.Utils.setEnabledIfAndEnabled
+import net.minecraft.client.renderer.GlStateManager
 
 class TabWidget(
     private val tabIndex: Int,
@@ -47,11 +48,11 @@ class TabWidget(
     var onToggle: ((Boolean) -> Unit)? = null
 
     init {
-        size(TAB_TEXTURE.width, TAB_TEXTURE.height).top({ 4.0 + tabOrder * 30.0 }, Unit.Measure.PIXEL)
+        size(TAB_TEXTURE.width, TAB_TEXTURE.height).top({ tabOrder * 30.0 }, Unit.Measure.PIXEL)
 
         when (expandDirection) {
-            ExpandDirection.LEFT -> left(-TAB_TEXTURE.width + 4)
-            ExpandDirection.RIGHT -> right(-TAB_TEXTURE.width + 4)
+            ExpandDirection.LEFT -> left(-TAB_TEXTURE.width - 2)
+            ExpandDirection.RIGHT -> right(-TAB_TEXTURE.width + 2)
         }
     }
 
@@ -85,7 +86,9 @@ class TabWidget(
         if (showExpanded)
             return
 
+        GlStateManager.color(1f, 1f, 1f, 1f)
         tabIcon?.draw(context, 8, 6, 16, 16, widgetTheme.getThemeOrDefault())
+        GlStateManager.color(1f, 1f, 1f, 1f)
     }
 
     override fun drawBackground(context: ModularGuiContext?, widgetTheme: WidgetThemeEntry<*>?) {

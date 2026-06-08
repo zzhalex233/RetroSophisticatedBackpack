@@ -12,6 +12,9 @@ import com.cleanroommc.retrosophisticatedbackpacks.client.gui.widgets.slot.Backp
 
 class BackpackInventoryScrollWidget(panel: BackpackPanel) :
     ScrollWidget<BackpackInventoryScrollWidget>(VerticalScrollData(false, SCROLLBAR_WIDTH)) {
+    private val panel = panel
+    private var lastSearchLayoutVersion = panel.searchLayoutVersion
+
     init {
         val scrollData = scrollArea.scrollY
         scrollData.scrollSize = panel.colSize * SLOT_SIZE
@@ -20,6 +23,18 @@ class BackpackInventoryScrollWidget(panel: BackpackPanel) :
         size(panel.backpackSlotsWidth + panel.inventoryScrollbarWidth, panel.visibleColSize * SLOT_SIZE)
 
         child(createSlots(panel, panel.colSize))
+    }
+
+    override fun onUpdate() {
+        super.onUpdate()
+        val scrollData = scrollArea.scrollY
+        scrollData.scrollSize = panel.searchDisplayRows() * SLOT_SIZE
+        if (lastSearchLayoutVersion != panel.searchLayoutVersion) {
+            lastSearchLayoutVersion = panel.searchLayoutVersion
+            scrollData.scrollTo(scrollArea, 0)
+        } else {
+            scrollData.clamp(scrollArea)
+        }
     }
 
     companion object {
@@ -38,6 +53,12 @@ class BackpackInventoryScrollWidget(panel: BackpackPanel) :
                         .name("slot_$i")
                 )
             }
+            slots.child(
+                MobCatcherInventoryControlWidget(panel)
+                    .pos(0, 0)
+                    .name("mob_catcher_inventory_control")
+                    .setEnabledIf { !panel.isSettingMode && !panel.isSearchViewActive() }
+            )
             return slots
         }
     }
@@ -56,7 +77,8 @@ class BackpackInventoryScrollWidget(panel: BackpackPanel) :
 
         override fun drawBackground(context: ModularGuiContext, widgetTheme: WidgetThemeEntry<*>) {
             val theme = widgetTheme.theme
-            for (i in 0 until panel.backpackWrapper.backpackInventorySize()) {
+            panel.updateSearchLayout()
+            for (i in 0 until panel.searchVisibleSlotCount()) {
                 RSBTextures.SLOT_BACKGROUND.draw(
                     context,
                     i % panel.rowSize * SLOT_SIZE,

@@ -2,7 +2,8 @@
   "type": "retro_sophisticated_backpacks:backpack_upgrade_shaped",
   "key": {
     "U": {
-      "item": "minecraft:iron_ingot"
+      "type": "forge:ore_dict",
+      "ore": "ingotIron"
     },
     "B": {
       "item": "retro_sophisticated_backpacks:backpack_leather"

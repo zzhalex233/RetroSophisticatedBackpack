@@ -7,7 +7,7 @@ import net.minecraftforge.common.capabilities.ICapabilityProvider
 class JukeboxUpgradeItem(
     registryName: String,
     private val wrapperFactory: () -> IJukeboxUpgrade,
-) : UpgradeItem(registryName, true) {
+) : UpgradeItem(registryName, true, "jukebox") {
     override fun initCapabilities(stack: net.minecraft.item.ItemStack, nbt: NBTTagCompound?): ICapabilityProvider {
         val capability = wrapperFactory.invoke()
         nbt?.let(capability::deserializeNBT)

@@ -2,6 +2,7 @@ package com.cleanroommc.retrosophisticatedbackpacks.capability.upgrade
 
 import com.cleanroommc.retrosophisticatedbackpacks.capability.Capabilities
 import com.cleanroommc.retrosophisticatedbackpacks.capability.upgrade.UpgradeFilterUtils.matchesAllowEmpty
+import com.cleanroommc.retrosophisticatedbackpacks.config.Config
 import com.cleanroommc.retrosophisticatedbackpacks.item.VoidUpgradeItem
 import com.cleanroommc.retrosophisticatedbackpacks.util.Utils.asTranslationKey
 import net.minecraft.item.ItemStack
@@ -9,14 +10,19 @@ import net.minecraft.nbt.NBTTagCompound
 import net.minecraft.util.EnumFacing
 import net.minecraftforge.common.capabilities.Capability
 
-class VoidUpgradeWrapper : BasicUpgradeWrapper<VoidUpgradeItem>(), IVoidUpgrade {
+class VoidUpgradeWrapper :
+    BasicUpgradeWrapper<VoidUpgradeItem>(Config.voidUpgrade.filterSlots, Config.voidUpgrade.slotsInRow),
+    IVoidUpgrade {
     companion object {
         private const val VOID_TYPE_TAG = "VoidType"
         private const val SHOULD_WORK_IN_GUI_TAG = "ShouldWorkInGui"
     }
 
     override val settingsLangKey = "gui.void_settings".asTranslationKey()
-    var voidType = VoidType.ALWAYS
+    var voidType = normalizeVoidType(VoidType.ALWAYS)
+        set(value) {
+            field = normalizeVoidType(value)
+        }
     var shouldWorkInGui = false
 
     init {
@@ -49,6 +55,9 @@ class VoidUpgradeWrapper : BasicUpgradeWrapper<VoidUpgradeItem>(), IVoidUpgrade 
         voidType = VoidType.entries.getOrElse(nbt.getByte(VOID_TYPE_TAG).toInt()) { VoidType.ALWAYS }
         shouldWorkInGui = nbt.getBoolean(SHOULD_WORK_IN_GUI_TAG)
     }
+
+    private fun normalizeVoidType(type: VoidType): VoidType =
+        if (!Config.voidUpgrade.voidAlwaysEnabled && type == VoidType.ALWAYS) VoidType.SLOT_OVERFLOW else type
 
     override fun hasCapability(capability: Capability<*>, facing: EnumFacing?): Boolean =
         capability == Capabilities.VOID_UPGRADE_CAPABILITY ||
@@ -56,14 +65,19 @@ class VoidUpgradeWrapper : BasicUpgradeWrapper<VoidUpgradeItem>(), IVoidUpgrade 
                 super<BasicUpgradeWrapper>.hasCapability(capability, facing)
 }
 
-class AdvancedVoidUpgradeWrapper : AdvancedUpgradeWrapper<VoidUpgradeItem>(), IVoidUpgrade {
+class AdvancedVoidUpgradeWrapper :
+    AdvancedUpgradeWrapper<VoidUpgradeItem>(Config.advancedVoidUpgrade.filterSlots, Config.advancedVoidUpgrade.slotsInRow),
+    IVoidUpgrade {
     companion object {
         private const val VOID_TYPE_TAG = "VoidType"
         private const val SHOULD_WORK_IN_GUI_TAG = "ShouldWorkInGui"
     }
 
     override val settingsLangKey = "gui.advanced_void_settings".asTranslationKey()
-    var voidType = VoidType.ALWAYS
+    var voidType = normalizeVoidType(VoidType.ALWAYS)
+        set(value) {
+            field = normalizeVoidType(value)
+        }
     var shouldWorkInGui = false
 
     init {
@@ -96,6 +110,9 @@ class AdvancedVoidUpgradeWrapper : AdvancedUpgradeWrapper<VoidUpgradeItem>(), IV
         voidType = VoidType.entries.getOrElse(nbt.getByte(VOID_TYPE_TAG).toInt()) { VoidType.ALWAYS }
         shouldWorkInGui = nbt.getBoolean(SHOULD_WORK_IN_GUI_TAG)
     }
+
+    private fun normalizeVoidType(type: VoidType): VoidType =
+        if (!Config.advancedVoidUpgrade.voidAlwaysEnabled && type == VoidType.ALWAYS) VoidType.SLOT_OVERFLOW else type
 
     override fun hasCapability(capability: Capability<*>, facing: EnumFacing?): Boolean =
         capability == Capabilities.ADVANCED_VOID_UPGRADE_CAPABILITY ||

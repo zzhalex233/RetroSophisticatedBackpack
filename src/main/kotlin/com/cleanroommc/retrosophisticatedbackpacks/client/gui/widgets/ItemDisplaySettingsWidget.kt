@@ -66,7 +66,7 @@ class ItemDisplaySettingsWidget(
         .tooltipAutoUpdate(true)
         .tooltipDynamic {
             it.addLine(IKey.lang("gui.settings_button.item_display_color".asTranslationKey()))
-                .addLine(IKey.str(panel.backpackWrapper.itemDisplayColor.name.lowercase()))
+                .addLine(IKey.lang("gui.settings_button.item_display_color_detail".asTranslationKey()).style(IKey.GRAY))
                 .pos(RichTooltip.Pos.NEXT_TO_MOUSE)
         }
 
@@ -96,7 +96,8 @@ class ItemDisplaySettingsWidget(
         .tooltipDynamic {
             it.addLine(
                 IKey.lang("gui.settings_button.display_side_${panel.backpackWrapper.itemDisplaySide.serializedName}".asTranslationKey())
-            ).pos(RichTooltip.Pos.NEXT_TO_MOUSE)
+            ).addLine(IKey.lang("gui.settings_button.display_side_detail".asTranslationKey()).style(IKey.GRAY))
+                .pos(RichTooltip.Pos.NEXT_TO_MOUSE)
         }
 
     init {

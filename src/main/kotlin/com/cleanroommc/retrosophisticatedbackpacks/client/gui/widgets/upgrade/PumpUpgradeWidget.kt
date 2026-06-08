@@ -8,9 +8,9 @@ import com.cleanroommc.modularui.screen.RichTooltip
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext
 import com.cleanroommc.modularui.theme.WidgetThemeEntry
 import com.cleanroommc.modularui.widget.Widget
-import com.cleanroommc.modularui.widgets.ButtonWidget
 import com.cleanroommc.retrosophisticatedbackpacks.capability.upgrade.PumpUpgradeWrapper
 import com.cleanroommc.retrosophisticatedbackpacks.client.gui.RSBTextures
+import com.cleanroommc.retrosophisticatedbackpacks.client.gui.widgets.DynamicIconButtonWidget
 import com.cleanroommc.retrosophisticatedbackpacks.sync.UpgradeSlotSH
 import com.cleanroommc.retrosophisticatedbackpacks.util.Utils.asTranslationKey
 import com.cleanroommc.retrosophisticatedbackpacks.util.Utils.getThemeOrDefault
@@ -23,7 +23,7 @@ open class PumpUpgradeWidget(
 ) : ExpandedUpgradeTabWidget<PumpUpgradeWrapper>(slotIndex, wrapper, 3, stack, wrapper.settingsLangKey, width = 48) {
     init {
         size(48, 50)
-        child(toggleButton({ wrapper.isInput }, RSBTextures.PUMP_INPUT_ICON, RSBTextures.PUMP_OUTPUT_ICON, "gui.pump_input".asTranslationKey()) {
+        child(toggleButton({ wrapper.isInput }, RSBTextures.PUMP_INPUT_ICON, RSBTextures.PUMP_OUTPUT_ICON, "gui.pump_input", "gui.pump_output") {
             wrapper.isInput = !wrapper.isInput
             slotSyncHandler?.syncToServer(UpgradeSlotSH.UPDATE_PUMP_INPUT) { it.writeBoolean(wrapper.isInput) }
         }.pos(3, 24))
@@ -33,19 +33,26 @@ open class PumpUpgradeWidget(
         state: () -> Boolean,
         enabledIcon: IDrawable,
         disabledIcon: IDrawable,
-        tooltip: String,
+        enabledTooltip: String,
+        disabledTooltip: String,
         action: () -> Unit
-    ): ButtonWidget<*> =
-        ButtonWidget()
-            .size(20)
-            .overlay(if (state()) enabledIcon else disabledIcon)
+    ): DynamicIconButtonWidget =
+        DynamicIconButtonWidget({ if (state()) enabledIcon else disabledIcon })
+            .size(18)
             .onMousePressed {
                 if (it != 0) false else {
                     action()
+                    Interactable.playButtonClickSound()
                     true
                 }
             }
-            .tooltipStatic { it.addLine(IKey.lang(tooltip)).pos(RichTooltip.Pos.NEXT_TO_MOUSE) }
+            .tooltipAutoUpdate(true)
+            .tooltipDynamic {
+                val key = if (state()) enabledTooltip else disabledTooltip
+                it.addLine(IKey.lang(key.asTranslationKey()))
+                    .addLine(IKey.lang("${key}_detail".asTranslationKey()).style(IKey.GRAY))
+                    .pos(RichTooltip.Pos.NEXT_TO_MOUSE)
+            }
 }
 
 class AdvancedPumpUpgradeWidget(slotIndex: Int, wrapper: PumpUpgradeWrapper, stack: ItemStack) :
@@ -53,20 +60,20 @@ class AdvancedPumpUpgradeWidget(slotIndex: Int, wrapper: PumpUpgradeWrapper, sta
     init {
         size(84, 82)
         width(84)
-        child(toggleButton({ wrapper.interactWithFluidHandlers }, RSBTextures.PUMP_FLUID_HANDLER_ICON, RSBTextures.PUMP_NO_FLUID_HANDLER_ICON, "gui.pump_fluid_handlers".asTranslationKey()) {
+        child(toggleButton({ wrapper.interactWithFluidHandlers }, RSBTextures.PUMP_FLUID_HANDLER_ICON, RSBTextures.PUMP_NO_FLUID_HANDLER_ICON, "gui.pump_fluid_handlers", "gui.pump_no_fluid_handlers") {
             wrapper.interactWithFluidHandlers = !wrapper.interactWithFluidHandlers
             slotSyncHandler?.syncToServer(UpgradeSlotSH.UPDATE_PUMP_FLUID_HANDLERS) {}
         }.pos(21, 24))
-        child(toggleButton({ wrapper.interactWithWorld }, RSBTextures.PUMP_WORLD_ICON, RSBTextures.PUMP_NO_WORLD_ICON, "gui.pump_world".asTranslationKey()) {
+        child(toggleButton({ wrapper.interactWithWorld }, RSBTextures.PUMP_WORLD_ICON, RSBTextures.PUMP_NO_WORLD_ICON, "gui.pump_world", "gui.pump_no_world") {
             wrapper.interactWithWorld = !wrapper.interactWithWorld
             slotSyncHandler?.syncToServer(UpgradeSlotSH.UPDATE_PUMP_WORLD) {}
         }.pos(39, 24))
-        child(toggleButton({ wrapper.interactWithHand }, RSBTextures.PUMP_HAND_ICON, RSBTextures.PUMP_NO_HAND_ICON, "gui.pump_hand".asTranslationKey()) {
+        child(toggleButton({ wrapper.interactWithHand }, RSBTextures.PUMP_HAND_ICON, RSBTextures.PUMP_NO_HAND_ICON, "gui.pump_hand", "gui.pump_no_hand") {
             wrapper.interactWithHand = !wrapper.interactWithHand
             slotSyncHandler?.syncToServer(UpgradeSlotSH.UPDATE_PUMP_HAND) {}
         }.pos(57, 24))
         for (slot in wrapper.fluidFilters.indices) {
-            child(FluidFilterSlotWidget(slot, wrapper).pos(3 + slot * 18, 50))
+            child(FluidFilterSlotWidget(slot, wrapper).pos(3 + slot * 18, 44))
         }
     }
 
@@ -79,6 +86,7 @@ class AdvancedPumpUpgradeWidget(slotIndex: Int, wrapper: PumpUpgradeWrapper, sta
             tooltipDynamic {
                 val fluid = pumpWrapper.fluidFilters.getOrNull(filterSlot)
                 it.addLine(if (fluid == null) IKey.lang("gui.none".asTranslationKey()) else IKey.str(fluid.localizedName))
+                it.addLine(IKey.lang("gui.pump_fluid_filter_detail".asTranslationKey()).style(IKey.GRAY))
                 it.pos(RichTooltip.Pos.NEXT_TO_MOUSE)
             }.tooltipAutoUpdate(true)
         }

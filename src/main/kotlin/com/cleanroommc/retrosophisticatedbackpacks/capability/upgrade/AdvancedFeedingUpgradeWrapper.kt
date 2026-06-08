@@ -2,17 +2,20 @@ package com.cleanroommc.retrosophisticatedbackpacks.capability.upgrade
 
 import com.cleanroommc.retrosophisticatedbackpacks.backpack.BackpackDataFixer
 import com.cleanroommc.retrosophisticatedbackpacks.capability.Capabilities
+import com.cleanroommc.retrosophisticatedbackpacks.config.Config
 import com.cleanroommc.retrosophisticatedbackpacks.inventory.ExposedItemStackHandler
 import com.cleanroommc.retrosophisticatedbackpacks.item.FeedingUpgradeItem
+import com.cleanroommc.retrosophisticatedbackpacks.util.BackpackItemStackHelper
 import com.cleanroommc.retrosophisticatedbackpacks.util.Utils.asTranslationKey
-import net.minecraft.item.ItemFood
 import net.minecraft.item.ItemStack
 import net.minecraft.nbt.NBTTagCompound
 import net.minecraft.util.EnumFacing
 import net.minecraftforge.common.capabilities.Capability
 import net.minecraftforge.items.IItemHandler
 
-class AdvancedFeedingUpgradeWrapper : AdvancedUpgradeWrapper<FeedingUpgradeItem>(), IFeedingUpgrade {
+class AdvancedFeedingUpgradeWrapper :
+    AdvancedUpgradeWrapper<FeedingUpgradeItem>(Config.advancedFeedingUpgrade.filterSlots, Config.advancedFeedingUpgrade.slotsInRow),
+    IFeedingUpgrade {
     companion object {
         private const val HUNGER_FEEDING_STRATEGY_TAG = "HungerFeedingStrategy"
         private const val HURT_FEEDING_STRATEGY_TAG = "HurtFeedingStrategy"
@@ -20,32 +23,26 @@ class AdvancedFeedingUpgradeWrapper : AdvancedUpgradeWrapper<FeedingUpgradeItem>
 
     override val settingsLangKey: String = "gui.advanced_feeding_settings".asTranslationKey()
 
-    override val filterItems: ExposedItemStackHandler = object : ExposedItemStackHandler(16) {
+    override val filterItems: ExposedItemStackHandler = object : ExposedItemStackHandler(Config.advancedFeedingUpgrade.filterSlots) {
         override fun isItemValid(slot: Int, stack: ItemStack): Boolean =
-            stack.item is ItemFood
+            IFeedingUpgrade.isValidFood(stack)
     }
     var hungerFeedingStrategy: FeedingStrategy.Hunger = FeedingStrategy.Hunger.HALF
-    var healthFeedingStrategy: FeedingStrategy.HEALTH = FeedingStrategy.HEALTH.IGNORE
+    var healthFeedingStrategy: FeedingStrategy.Health = FeedingStrategy.Health.IGNORE
 
     override fun checkFilter(stack: ItemStack): Boolean =
-        stack.item is ItemFood && super.checkFilter(stack)
+        IFeedingUpgrade.isValidFood(stack) && super.checkFilter(stack)
 
     override fun getFoodSlot(handler: IItemHandler, foodLevel: Int, health: Float, maxHealth: Float): Int {
         for (slot in 0 until handler.slots) {
-            val stack = handler.getStackInSlot(slot)
+            val hunger = BackpackItemStackHelper.getHungerFromSlot(handler, slot, ::checkFilter) ?: continue
 
-            if (!checkFilter(stack))
-                continue
-
-            val item = stack.item as? ItemFood ?: continue
-            val healingAmount = item.getHealAmount(stack)
-
-            if (maxHealth > health && healthFeedingStrategy == FeedingStrategy.HEALTH.ALWAYS)
+            if (maxHealth > health && healthFeedingStrategy == FeedingStrategy.Health.ALWAYS)
                 return slot
 
             val flag = when (hungerFeedingStrategy) {
-                FeedingStrategy.Hunger.FULL -> healingAmount <= 20 - foodLevel
-                FeedingStrategy.Hunger.HALF -> healingAmount / 2 <= 20 - foodLevel
+                FeedingStrategy.Hunger.FULL -> hunger <= 20 - foodLevel
+                FeedingStrategy.Hunger.HALF -> hunger / 2 <= 20 - foodLevel
                 FeedingStrategy.Hunger.ALWAYS -> foodLevel < 20
             }
 
@@ -71,7 +68,7 @@ class AdvancedFeedingUpgradeWrapper : AdvancedUpgradeWrapper<FeedingUpgradeItem>
     override fun deserializeNBT(nbt: NBTTagCompound) {
         super.deserializeNBT(nbt)
         hungerFeedingStrategy = FeedingStrategy.Hunger.entries[nbt.getByte(HUNGER_FEEDING_STRATEGY_TAG).toInt()]
-        healthFeedingStrategy = FeedingStrategy.HEALTH.entries[nbt.getByte(HURT_FEEDING_STRATEGY_TAG).toInt()]
+        healthFeedingStrategy = FeedingStrategy.Health.entries[nbt.getByte(HURT_FEEDING_STRATEGY_TAG).toInt()]
         BackpackDataFixer.fixFeedingUpgrade(filterItems)
     }
 
@@ -82,7 +79,7 @@ class AdvancedFeedingUpgradeWrapper : AdvancedUpgradeWrapper<FeedingUpgradeItem>
             ALWAYS;
         }
 
-        enum class HEALTH {
+        enum class Health {
             ALWAYS,
             IGNORE;
         }

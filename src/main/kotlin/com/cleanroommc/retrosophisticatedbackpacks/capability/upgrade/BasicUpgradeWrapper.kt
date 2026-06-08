@@ -7,7 +7,8 @@ import net.minecraft.nbt.NBTTagCompound
 import net.minecraft.util.EnumFacing
 import net.minecraftforge.common.capabilities.Capability
 
-abstract class BasicUpgradeWrapper<T>(filterSlots: Int = 9) : UpgradeWrapper<T>(), IToggleable, IBasicFilterable where T : UpgradeItem {
+abstract class BasicUpgradeWrapper<T>(filterSlots: Int = 9, override val slotsInRow: Int = 3) :
+    UpgradeWrapper<T>(), IToggleable, IBasicFilterable where T : UpgradeItem {
     override var enabled = true
     override var filterType = IBasicFilterable.FilterType.WHITELIST
     override val filterItems = ExposedItemStackHandler(filterSlots)

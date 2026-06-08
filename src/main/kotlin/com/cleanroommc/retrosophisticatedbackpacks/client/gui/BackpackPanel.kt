@@ -2,6 +2,7 @@ package com.cleanroommc.retrosophisticatedbackpacks.client.gui
 
 import com.cleanroommc.modularui.api.drawable.IDrawable
 import com.cleanroommc.modularui.api.drawable.IKey
+import com.cleanroommc.modularui.api.layout.IViewportStack
 import com.cleanroommc.modularui.api.widget.Interactable
 import com.cleanroommc.modularui.drawable.ItemDrawable
 import com.cleanroommc.modularui.drawable.UITexture
@@ -12,12 +13,11 @@ import com.cleanroommc.modularui.screen.viewport.ModularGuiContext
 import com.cleanroommc.modularui.theme.WidgetTheme
 import com.cleanroommc.modularui.theme.WidgetThemeEntry
 import com.cleanroommc.modularui.value.sync.PanelSyncManager
-import com.cleanroommc.modularui.widgets.ButtonWidget
+import com.cleanroommc.modularui.widget.Widget
 import com.cleanroommc.modularui.widgets.SlotGroupWidget
 import com.cleanroommc.modularui.widgets.TextWidget
 import com.cleanroommc.modularui.widgets.slot.ItemSlot
 import com.cleanroommc.modularui.widgets.slot.SlotGroup
-import com.cleanroommc.retrosophisticatedbackpacks.Tags
 import com.cleanroommc.retrosophisticatedbackpacks.backpack.BackpackInventoryHelper
 import com.cleanroommc.retrosophisticatedbackpacks.backpack.SortType
 import com.cleanroommc.retrosophisticatedbackpacks.capability.BackpackWrapper
@@ -33,6 +33,7 @@ import com.cleanroommc.retrosophisticatedbackpacks.common.gui.slot.LockedPlayerS
 import com.cleanroommc.retrosophisticatedbackpacks.common.gui.slot.ModularBackpackSlot
 import com.cleanroommc.retrosophisticatedbackpacks.common.gui.slot.ModularUpgradeSlot
 import com.cleanroommc.retrosophisticatedbackpacks.config.ClientConfig
+import com.cleanroommc.retrosophisticatedbackpacks.config.Config
 import com.cleanroommc.retrosophisticatedbackpacks.item.UpgradeItem
 import com.cleanroommc.retrosophisticatedbackpacks.sync.BackpackSH
 import com.cleanroommc.retrosophisticatedbackpacks.sync.BackpackSlotSH
@@ -41,11 +42,17 @@ import com.cleanroommc.retrosophisticatedbackpacks.tileentity.BackpackTileEntity
 import com.cleanroommc.retrosophisticatedbackpacks.util.Utils.asTranslationKey
 import com.cleanroommc.retrosophisticatedbackpacks.util.Utils.ceilDiv
 import com.cleanroommc.retrosophisticatedbackpacks.util.Utils.setEnabledIfAndEnabled
+import net.minecraft.client.Minecraft
 import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.item.ItemStack
+import net.minecraft.client.gui.Gui
+import net.minecraft.client.renderer.GlStateManager
+import net.minecraft.client.util.ITooltipFlag
+import net.minecraft.util.text.TextFormatting
 import net.minecraftforge.fml.common.Loader
 import net.minecraftforge.items.wrapper.PlayerInvWrapper
 import net.minecraftforge.items.wrapper.PlayerMainInvWrapper
+import java.util.Locale
 import kotlin.math.min
 
 class BackpackPanel(
@@ -60,6 +67,11 @@ class BackpackPanel(
         private const val HEIGHT_WITHOUT_STORAGE_SLOTS = 114
         private const val STORAGE_INVENTORY_X = 7
         private const val STORAGE_INVENTORY_Y = 17
+        private const val SEARCH_BOX_MIN_WIDTH = 10
+        private const val SEARCH_BOX_HEIGHT = 10
+        private const val SEARCH_BOX_UNFOCUSED_COLOR = 0xBBBBBB
+        private const val SEARCH_BOX_ANIMATION_MS = 200L
+        internal const val DISABLED_SLOT_X_POS = -2000
         internal const val VISIBLE_BACKPACK_ROWS = 5
         internal const val PLAYER_INVENTORY_BOTTOM = 8
         internal const val INVENTORY_CONTROL_COLUMNS = 2
@@ -158,6 +170,11 @@ class BackpackPanel(
     private var rebuildWidgetsQueued = false
     private var lastUpgradeStructureSignature = emptyList<String>()
     private var reopenBackpackQueued = false
+    private val searchSlotDisplayIndices = IntArray(backpackWrapper.backpackInventorySize()) { it }
+    private var searchVisibleSlots = backpackWrapper.backpackInventorySize()
+    private var lastSearchLayoutKey = ""
+    var searchLayoutVersion = 0
+        private set
     var isSettingMode: Boolean = false
         set(value) {
             if (field == value)
@@ -173,11 +190,18 @@ class BackpackPanel(
                 closeSettingTabs()
                 updateUpgradeWidgets()
             }
+            updateSearchLayout(force = true)
             scheduleResize()
         }
 
+    private val searchTerms: List<String>
+        get() = backpackWrapper.searchPhrase.trim()
+            .split(Regex("\\s+"))
+            .filter(String::isNotEmpty)
+
     override fun onUpdate() {
         super.onUpdate()
+        updateSearchLayout()
         if (!rebuildWidgetsQueued)
             queueRebuildIfUpgradeStructureChanged()
         if (reopenBackpackQueued) {
@@ -224,19 +248,21 @@ class BackpackPanel(
 
         recalculateLayout()
         size(panelWidth, panelHeight)
+        updateSearchLayout(force = true)
         upgradeSlotWidgets.clear()
         tabWidgets.clear()
         upgradeSlotGroupWidget = UpgradeSlotGroupWidget(this, backpackWrapper.upgradeSlotsSize())
         currentItemDisplaySelectedSlot = -1
 
         addPlayerInventoryWidgets()
-        addSortingButtons()
-        addTransferButtons()
         addBackpackInventorySlots()
         addUpgradeSlots()
         addSettingTab()
         addUpgradeTabs()
         addTexts(player)
+        addSortingButtons()
+        addSearchBox()
+        addTransferButtons()
         closeSettingTabs()
         lastUpgradeStructureSignature = upgradeStructureSignature()
         updateUpgradeWidgets()
@@ -371,11 +397,10 @@ class BackpackPanel(
             .top(4)
             .right(rightAnchor)
             .size(12)
-        val sortButton = ButtonWidget()
+        val sortButton = TransferButtonWidget(RSBTextures.SOLID_UP_ARROW_ICON, RSBTextures.SOLID_UP_ARROW_ICON)
             .top(4)
             .right(rightAnchor + 14)
             .size(12)
-            .overlay(RSBTextures.SOLID_UP_ARROW_ICON)
             .setEnabledIf {
                 !isSettingMode
             }
@@ -474,13 +499,294 @@ class BackpackPanel(
             .child(transferToBackpackButton)
     }
 
+    internal fun addSearchBox() {
+        val rightAnchor = if (Loader.isModLoaded("bogosorter")) 30 else 7
+        val sortButtonLeft = panelWidth - (rightAnchor + 14) - 12
+        val left = 7
+        val width = (sortButtonLeft - 1 - left).coerceAtLeast(SEARCH_BOX_MIN_WIDTH)
+        if (width <= 0) {
+            return
+        }
+
+        child(
+            SearchBoxWidget()
+                .top(5)
+                .left(left)
+                .size(width, SEARCH_BOX_HEIGHT)
+                .setEnabledIf { !isSettingMode }
+        )
+    }
+
     internal fun addPlayerInventoryWidgets() {
         child(
             SlotGroupWidget.playerInventory(PLAYER_INVENTORY_BOTTOM - 1, false) { _, _ ->
                 NoBackgroundItemSlot()
             }
+                .disableSortButtons()
                 .left(playerInventoryLabelX - 1)
         )
+    }
+
+    internal fun hasSearchPhrase(): Boolean =
+        searchTerms.isNotEmpty()
+
+    internal fun isSearchViewActive(): Boolean =
+        !isSettingMode && hasSearchPhrase()
+
+    internal fun updateSearchLayout(force: Boolean = false) {
+        val key = if (isSearchViewActive())
+            "${isSettingMode}|${backpackWrapper.searchPhrase}|${searchInventorySignature()}"
+        else "${isSettingMode}|${backpackWrapper.searchPhrase}|${backpackWrapper.backpackInventorySize()}"
+        if (!force && key == lastSearchLayoutKey) {
+            return
+        }
+
+        lastSearchLayoutKey = key
+        searchVisibleSlots = 0
+
+        if (!isSearchViewActive()) {
+            for (slotIndex in searchSlotDisplayIndices.indices) {
+                searchSlotDisplayIndices[slotIndex] = slotIndex
+            }
+            searchVisibleSlots = backpackWrapper.backpackInventorySize()
+        } else {
+            for (slotIndex in searchSlotDisplayIndices.indices) {
+                val stack = backpackWrapper.getStackInSlot(slotIndex)
+                searchSlotDisplayIndices[slotIndex] =
+                    if (!backpackWrapper.isSlotBlockedByMobCatcher(slotIndex) && !stack.isEmpty && matchesSearch(stack))
+                        searchVisibleSlots++
+                    else DISABLED_SLOT_X_POS
+            }
+        }
+
+        searchLayoutVersion++
+    }
+
+    internal fun isSearchSlotVisible(slotIndex: Int): Boolean =
+        !isSearchViewActive() || searchSlotDisplayIndices.getOrNull(slotIndex)?.let { it >= 0 } == true
+
+    internal fun searchSlotX(slotIndex: Int): Int {
+        val displayIndex = searchSlotDisplayIndices.getOrNull(slotIndex) ?: return DISABLED_SLOT_X_POS
+        return if (displayIndex < 0) DISABLED_SLOT_X_POS else displayIndex % rowSize * SLOT_SIZE
+    }
+
+    internal fun searchSlotY(slotIndex: Int): Int {
+        val displayIndex = searchSlotDisplayIndices.getOrNull(slotIndex) ?: return 0
+        return if (displayIndex < 0) 0 else displayIndex / rowSize * SLOT_SIZE
+    }
+
+    internal fun searchVisibleSlotCount(): Int =
+        if (isSearchViewActive()) searchVisibleSlots else backpackWrapper.backpackInventorySize()
+
+    internal fun searchDisplayRows(): Int =
+        if (isSearchViewActive()) searchVisibleSlots.coerceAtLeast(1).ceilDiv(rowSize).coerceAtLeast(visibleColSize)
+        else colSize
+
+    private fun searchInventorySignature(): String =
+        buildString {
+            append(backpackWrapper.backpackInventorySize())
+            for (slotIndex in 0 until backpackWrapper.backpackInventorySize()) {
+                val stack = backpackWrapper.getStackInSlot(slotIndex)
+                append('|')
+                if (stack.isEmpty) {
+                    append("empty")
+                } else {
+                    append(stack.item.registryName)
+                        .append(':')
+                        .append(stack.metadata)
+                        .append(':')
+                        .append(stack.count)
+                }
+                append(':')
+                    .append(backpackWrapper.isSlotBlockedByMobCatcher(slotIndex))
+            }
+        }
+
+    internal fun matchesSearch(stack: ItemStack): Boolean {
+        val terms = searchTerms
+        if (terms.isEmpty()) {
+            return true
+        }
+        if (stack.isEmpty) {
+            return false
+        }
+
+        val displayName = stack.displayName.lowercase(Locale.ROOT)
+        val registryName = stack.item.registryName
+        val modId = registryName?.namespace?.lowercase(Locale.ROOT) ?: ""
+        val tooltipLines by lazy {
+            stack.getTooltip(player, ITooltipFlag.TooltipFlags.NORMAL)
+                .joinToString("\n") { TextFormatting.getTextWithoutFormattingCodes(it) ?: it }
+                .lowercase(Locale.ROOT)
+        }
+
+        return terms.all { rawTerm ->
+            val term = rawTerm.lowercase(Locale.ROOT)
+            when {
+                term.startsWith("@") -> modId.contains(term.drop(1))
+                term.startsWith("#") -> tooltipLines.contains(term.drop(1))
+                else -> displayName.contains(term)
+            }
+        }
+    }
+
+    private fun setSearchPhrase(phrase: String) {
+        val trimmed = phrase.take(50)
+        if (backpackWrapper.searchPhrase == trimmed) {
+            return
+        }
+        backpackWrapper.searchPhrase = trimmed
+        updateSearchLayout(force = true)
+        backpackSyncHandler.syncToServer(BackpackSH.UPDATE_SEARCH_PHRASE) {
+            it.writeString(trimmed)
+        }
+    }
+
+    private inner class SearchBoxWidget : VanillaTextFieldWidget<SearchBoxWidget>(1, SEARCH_BOX_MIN_WIDTH - 2, 8) {
+        private var lastSyncedText = backpackWrapper.searchPhrase
+        private var lastFocusChangeTime = Minecraft.getSystemTime()
+        private var currentWidth = -1
+        private var currentTheme = WidgetTheme.getDefault().theme
+
+        init {
+            textField.setMaxStringLength(50)
+            textField.setText(backpackWrapper.searchPhrase)
+            textField.setTextColor(if (backpackWrapper.searchPhrase.isEmpty()) SEARCH_BOX_UNFOCUSED_COLOR else 0xFFFFFF)
+            textField.setDisabledTextColour(SEARCH_BOX_UNFOCUSED_COLOR)
+            tooltipBuilder {
+                it.addLine(IKey.lang("gui.search".asTranslationKey()))
+                    .addLine(IKey.lang("gui.search_detail".asTranslationKey()).style(IKey.GRAY))
+                    .pos(RichTooltip.Pos.NEXT_TO_MOUSE)
+            }
+        }
+
+        override fun isInside(stack: IViewportStack, mx: Int, my: Int, absolute: Boolean): Boolean {
+            if (isSettingMode) {
+                return false
+            }
+            val x = if (absolute) stack.unTransformX(mx.toFloat(), my.toFloat()) else mx
+            val y = if (absolute) stack.unTransformY(mx.toFloat(), my.toFloat()) else my
+            return y >= 0 && y < area.height && x >= visualX() && x < area.width
+        }
+
+        override fun drawBackground(context: ModularGuiContext, widgetTheme: WidgetThemeEntry<*>) {}
+
+        override fun draw(context: ModularGuiContext, widgetTheme: WidgetThemeEntry<*>) {
+            currentTheme = widgetTheme.theme
+        }
+
+        override fun drawForeground(context: ModularGuiContext) {
+            if (isSettingMode) {
+                return
+            }
+            GlStateManager.color(1f, 1f, 1f, 1f)
+            val visualWidth = visualWidth()
+            val visualX = area.x + area.width - visualWidth
+            Gui.drawRect(visualX, area.y, visualX + visualWidth, area.y + area.height, 0xFF777777.toInt())
+            if (!isFocused() && textField.text.isEmpty()) {
+                RSBTextures.SEARCH_ICON.draw(
+                    context,
+                    visualX,
+                    area.y,
+                    SEARCH_BOX_MIN_WIDTH,
+                    SEARCH_BOX_HEIGHT,
+                    currentTheme
+                )
+            } else {
+                drawTextField()
+            }
+            GlStateManager.color(1f, 1f, 1f, 1f)
+            super.drawForeground(context)
+        }
+
+        override fun onMousePressed(mouseButton: Int): Interactable.Result {
+            if (isSettingMode) {
+                return Interactable.Result.IGNORE
+            }
+            val mouseX = context.mouseX
+            val mouseY = context.mouseY
+            if (mouseY < 0 || mouseY >= area.height || mouseX < visualX() || mouseX >= area.width) {
+                return Interactable.Result.IGNORE
+            }
+            if (mouseButton == 1) {
+                onTextChanged("")
+                return Interactable.Result.SUCCESS
+            }
+            if (mouseButton != 0) {
+                return Interactable.Result.STOP
+            }
+            return super.onMousePressed(mouseButton)
+        }
+
+        override fun onUpdate() {
+            super.onUpdate()
+            if (isSettingMode) {
+                if (isFocused()) {
+                    context.removeFocus()
+                }
+                return
+            }
+            animateWidth()
+            if (backpackWrapper.searchPhrase != lastSyncedText && backpackWrapper.searchPhrase != textField.text) {
+                lastSyncedText = backpackWrapper.searchPhrase
+                textField.setText(lastSyncedText)
+            }
+        }
+
+        override fun onTextChanged(text: String) {
+            val trimmed = text.take(50)
+            if (textField.text != trimmed) {
+                textField.setText(trimmed)
+            }
+            if (trimmed == lastSyncedText) {
+                return
+            }
+            lastSyncedText = trimmed
+            setSearchPhrase(lastSyncedText)
+        }
+
+        override fun onFocusChanged(focused: Boolean) {
+            lastFocusChangeTime = Minecraft.getSystemTime()
+            textField.setTextColor(if (focused) 0xFFFFFF else SEARCH_BOX_UNFOCUSED_COLOR)
+        }
+
+        private fun visualWidth(): Int {
+            animateWidth()
+            return currentWidth.coerceIn(SEARCH_BOX_MIN_WIDTH, area.width)
+        }
+
+        private fun visualX(): Int = area.width - visualWidth()
+
+        override fun textFieldX(): Int = area.x + visualX() + 1
+
+        override fun textFieldY(): Int = area.y + 1
+
+        override fun textFieldWidth(): Int = visualWidth() - 6
+
+        override fun textFieldHeight(): Int = SEARCH_BOX_HEIGHT
+
+        override fun mouseXForTextField(): Int = area.x + context.mouseX
+
+        override fun mouseYForTextField(): Int = area.y + context.mouseY
+
+        private fun animateWidth() {
+            val target = if (isFocused() || textField.text.isNotEmpty()) area.width else SEARCH_BOX_MIN_WIDTH
+            if (currentWidth < 0) {
+                currentWidth = target
+                return
+            }
+            if (currentWidth == target) {
+                return
+            }
+            val elapsed = (Minecraft.getSystemTime() - lastFocusChangeTime).coerceAtLeast(0L)
+            val ratio = (elapsed.toFloat() / SEARCH_BOX_ANIMATION_MS).coerceIn(0f, 1f)
+            val eased = if (ratio < 0.5f) 4f * ratio * ratio * ratio else 1f - Math.pow((-2f * ratio + 2f).toDouble(), 3.0).toFloat() / 2f
+            currentWidth = if (target == area.width) {
+                (SEARCH_BOX_MIN_WIDTH + (area.width - SEARCH_BOX_MIN_WIDTH) * eased).toInt()
+            } else {
+                (area.width - (area.width - SEARCH_BOX_MIN_WIDTH) * eased).toInt()
+            }.coerceIn(SEARCH_BOX_MIN_WIDTH, area.width)
+        }
     }
 
     internal fun addBackpackInventorySlots() {
@@ -508,6 +814,7 @@ class BackpackPanel(
                 )
                     .pos(backpackSlotsWidth + inventoryScrollbarWidth + controlIndex * TankInventoryControlWidget.WIDTH, 0)
                     .name("tank_inventory_control_$slot")
+                    .setEnabledIf { !isSettingMode && !isSearchViewActive() }
             )
             controlIndex++
         }
@@ -525,6 +832,7 @@ class BackpackPanel(
                 )
                     .pos(backpackSlotsWidth + inventoryScrollbarWidth + controlIndex * BatteryInventoryControlWidget.WIDTH, 0)
                     .name("battery_inventory_control_$slot")
+                    .setEnabledIf { !isSettingMode && !isSearchViewActive() }
             )
             controlIndex++
         }
@@ -538,7 +846,10 @@ class BackpackPanel(
         upgradeSlotGroupWidget.setEnabledIf { !isSettingMode }
 
         for (i in 0 until backpackWrapper.upgradeSlotsSize()) {
-            val itemSlot = NoBackgroundItemSlot().syncHandler("upgrades", i).pos(5, 5 + i * 16).name("slot_${i}")
+            val itemSlot = NoBackgroundItemSlot(RSBTextures.EMPTY_UPGRADE_SLOT)
+                .syncHandler("upgrades", i)
+                .pos(5, 5 + i * 16)
+                .name("slot_${i}")
 
             upgradeSlotWidgets.add(itemSlot)
             upgradeSlotGroupWidget.child(itemSlot)
@@ -558,6 +869,13 @@ class BackpackPanel(
         backpackSettingTabWidget.tooltipDynamic {
             it.clearText()
                 .addLine(IKey.lang("gui.backpack_settings.tooltip".asTranslationKey()))
+                .addLine(
+                    IKey.lang(
+                        if (backpackSettingTabWidget.showExpanded)
+                            "gui.backpack_settings.tooltip_open_detail".asTranslationKey()
+                        else "gui.backpack_settings.tooltip_detail".asTranslationKey()
+                    ).style(IKey.GRAY)
+                )
                 .pos(RichTooltip.Pos.NEXT_TO_MOUSE)
         }
 
@@ -613,8 +931,10 @@ class BackpackPanel(
         }
 
         child(SettingTabWidget().setEnabledIf { !isSettingMode })
-            .child(itemDisplaySettingTabWidget)
-            .child(memorySettingTabWidget)
+        if (!Config.itemDisplayDisabled) {
+            child(itemDisplaySettingTabWidget)
+        }
+        child(memorySettingTabWidget)
             .child(sortingSettingTabWidget)
             .child(backpackSettingTabWidget)
             .child(backToBackpackTab)
@@ -687,7 +1007,7 @@ class BackpackPanel(
     }
 
     fun openItemDisplaySettings(tabWidget: TabWidget, open: Boolean) {
-        if (!isSettingMode)
+        if (!isSettingMode || Config.itemDisplayDisabled)
             return
 
         itemDisplaySettingTabWidget.showExpanded = open
@@ -715,7 +1035,7 @@ class BackpackPanel(
         backpackSettingTabWidget.isEnabled = isSettingMode
         memorySettingTabWidget.isEnabled = isSettingMode
         sortingSettingTabWidget.isEnabled = isSettingMode
-        itemDisplaySettingTabWidget.isEnabled = isSettingMode
+        itemDisplaySettingTabWidget.isEnabled = isSettingMode && !Config.itemDisplayDisabled
         isBackpackSettingTabOpened = false
         isMemorySettingTabOpened = false
         shouldMemorizeRespectNBT = false
@@ -748,6 +1068,9 @@ class BackpackPanel(
     private fun updateSettingTabEnabledStates(openTab: TabWidget, open: Boolean) {
         listOf(backpackSettingTabWidget, sortingSettingTabWidget, memorySettingTabWidget, itemDisplaySettingTabWidget)
             .forEach { it.isEnabled = !open || it == openTab }
+        if (Config.itemDisplayDisabled) {
+            itemDisplaySettingTabWidget.isEnabled = false
+        }
     }
 
     private fun closeUpgradeTabs(syncToServer: Boolean) {
@@ -988,7 +1311,7 @@ class BackpackPanel(
                             wrapper
                         )
                     )
-                        tabWidget.expandedWidget = JukeboxUpgradeWidget(slotIndex, wrapper, stack, 12)
+                        tabWidget.expandedWidget = JukeboxUpgradeWidget(slotIndex, wrapper, stack, wrapper.discInventory.slots)
                 }
 
                 is JukeboxUpgradeWrapper -> {
@@ -998,7 +1321,7 @@ class BackpackPanel(
                             wrapper
                         )
                     )
-                        tabWidget.expandedWidget = JukeboxUpgradeWidget(slotIndex, wrapper, stack, 1)
+                        tabWidget.expandedWidget = JukeboxUpgradeWidget(slotIndex, wrapper, stack, wrapper.discInventory.slots)
                 }
 
                 is AdvancedToolSwapperUpgradeWrapper -> {
@@ -1046,7 +1369,7 @@ class BackpackPanel(
                             wrapper
                         )
                     )
-                        tabWidget.expandedWidget = BatteryUpgradeWidget(slotIndex, wrapper, stack, backpackWrapper)
+                        tabWidget.expandedWidget = BatteryUpgradeWidget(slotIndex, wrapper, stack)
                 }
 
                 is AnvilUpgradeWrapper -> {

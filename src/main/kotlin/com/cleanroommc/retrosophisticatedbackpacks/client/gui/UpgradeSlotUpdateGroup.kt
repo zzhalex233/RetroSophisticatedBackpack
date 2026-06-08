@@ -138,20 +138,20 @@ class UpgradeSlotUpdateGroup(
         }
         syncManager.registerSlotGroup(SlotGroup("crafting_matrix_$slotIndex", 3, false))
 
-
-
-        craftingOutputSlot = {
-            val slot = IndexedModularCraftingSlot(slotIndex, craftingStackHandler.delegatedStackHandler, 9)
-            slot.slotGroup("crafting_result_$slotIndex")
-
+        craftingOutputSlot = run {
+            val slot = IndexedModularCraftingSlot(
+                this@UpgradeSlotUpdateGroup.slotIndex,
+                this@UpgradeSlotUpdateGroup.craftingStackHandler.delegatedStackHandler,
+                9
+            )
+            slot.slotGroup("crafting_result_${this@UpgradeSlotUpdateGroup.slotIndex}")
             syncManager.syncValue(
-                "crafting_result_$slotIndex",
+                "crafting_result_${this@UpgradeSlotUpdateGroup.slotIndex}",
                 0,
                 ItemSlotSH(slot)
             )
-
             slot
-        }.invoke()
+        }
         craftingInfo = CraftingSlotInfo(craftingMatrixSlots, craftingOutputSlot)
 
         syncManager.registerSlotGroup(SlotGroup("crafting_result_$slotIndex", 1, false))
@@ -247,5 +247,4 @@ class UpgradeSlotUpdateGroup(
         anvilStackHandler.setDelegatedStackHandler(wrapper::getInventory)
         anvilStackHandler.syncToServer(DelegatedStackHandlerSH.UPDATE_ANVIL)
     }
-
 }

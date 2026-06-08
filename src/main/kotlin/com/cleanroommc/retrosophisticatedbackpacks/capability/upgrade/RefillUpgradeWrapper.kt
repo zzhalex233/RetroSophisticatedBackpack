@@ -2,6 +2,7 @@ package com.cleanroommc.retrosophisticatedbackpacks.capability.upgrade
 
 import com.cleanroommc.retrosophisticatedbackpacks.capability.BackpackWrapper
 import com.cleanroommc.retrosophisticatedbackpacks.capability.Capabilities
+import com.cleanroommc.retrosophisticatedbackpacks.config.Config
 import com.cleanroommc.retrosophisticatedbackpacks.item.RefillUpgradeItem
 import com.cleanroommc.retrosophisticatedbackpacks.util.Utils.asTranslationKey
 import net.minecraft.entity.player.EntityPlayer
@@ -14,8 +15,11 @@ import net.minecraftforge.common.capabilities.Capability
 import net.minecraftforge.common.util.Constants
 import net.minecraftforge.items.ItemHandlerHelper
 
-open class RefillUpgradeWrapper(filterSlots: Int = 6) :
-    BasicUpgradeWrapper<RefillUpgradeItem>(filterSlots), IRefillUpgrade {
+open class RefillUpgradeWrapper(
+    filterSlots: Int = Config.refillUpgrade.filterSlots,
+    slotsInRow: Int = Config.refillUpgrade.slotsInRow
+) :
+    BasicUpgradeWrapper<RefillUpgradeItem>(filterSlots, slotsInRow), IRefillUpgrade {
     override val settingsLangKey = "gui.refill_settings".asTranslationKey()
 
     init {
@@ -156,7 +160,8 @@ open class RefillUpgradeWrapper(filterSlots: Int = 6) :
     }
 }
 
-class AdvancedRefillUpgradeWrapper : RefillUpgradeWrapper(12) {
+class AdvancedRefillUpgradeWrapper :
+    RefillUpgradeWrapper(Config.advancedRefillUpgrade.filterSlots, Config.advancedRefillUpgrade.slotsInRow) {
     companion object {
         private const val TARGET_SLOTS_TAG = "TargetSlots"
         private const val SLOT_TAG = "Slot"

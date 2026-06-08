@@ -1,6 +1,7 @@
 package com.cleanroommc.retrosophisticatedbackpacks.capability.upgrade
 
 import com.cleanroommc.retrosophisticatedbackpacks.capability.Capabilities
+import com.cleanroommc.retrosophisticatedbackpacks.config.Config
 import com.cleanroommc.retrosophisticatedbackpacks.item.FilterUpgradeItem
 import com.cleanroommc.retrosophisticatedbackpacks.util.Utils.asTranslationKey
 import net.minecraft.item.ItemStack
@@ -8,7 +9,9 @@ import net.minecraft.nbt.NBTTagCompound
 import net.minecraft.util.EnumFacing
 import net.minecraftforge.common.capabilities.Capability
 
-class AdvancedFilterUpgradeWrapper : AdvancedUpgradeWrapper<FilterUpgradeItem>(), IFilterUpgrade {
+class AdvancedFilterUpgradeWrapper :
+    AdvancedUpgradeWrapper<FilterUpgradeItem>(Config.advancedFilterUpgrade.filterSlots, Config.advancedFilterUpgrade.slotsInRow),
+    IFilterUpgrade {
     override val settingsLangKey: String = "gui.advanced_filter_settings".asTranslationKey()
     override var filterWay: IFilterUpgrade.FilterWayType = IFilterUpgrade.FilterWayType.IN_OUT
 

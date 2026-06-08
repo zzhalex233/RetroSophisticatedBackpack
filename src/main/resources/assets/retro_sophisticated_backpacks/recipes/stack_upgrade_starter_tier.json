@@ -2,7 +2,8 @@
   "type": "minecraft:crafting_shaped",
   "key": {
     "U": {
-      "item": "minecraft:coal_block"
+      "type": "forge:ore_dict",
+      "ore": "blockCoal"
     },
     "B": {
       "item": "retro_sophisticated_backpacks:upgrade_base"

@@ -1,6 +1,7 @@
 package com.cleanroommc.retrosophisticatedbackpacks.capability.upgrade
 
 import com.cleanroommc.retrosophisticatedbackpacks.capability.Capabilities
+import com.cleanroommc.retrosophisticatedbackpacks.config.Config
 import com.cleanroommc.retrosophisticatedbackpacks.inventory.ExposedItemStackHandler
 import com.cleanroommc.retrosophisticatedbackpacks.item.JukeboxUpgradeItem
 import com.cleanroommc.retrosophisticatedbackpacks.util.Utils.asTranslationKey
@@ -240,7 +241,7 @@ open class JukeboxUpgradeWrapper(private val slots: Int = 1) : UpgradeWrapper<Ju
                 super<UpgradeWrapper>.hasCapability(capability, facing)
 }
 
-class AdvancedJukeboxUpgradeWrapper : JukeboxUpgradeWrapper(12) {
+class AdvancedJukeboxUpgradeWrapper : JukeboxUpgradeWrapper(Config.advancedJukeboxUpgrade.numberOfSlots) {
     override val settingsLangKey = "gui.advanced_jukebox_settings".asTranslationKey()
 
     override fun hasCapability(capability: Capability<*>, facing: EnumFacing?): Boolean =

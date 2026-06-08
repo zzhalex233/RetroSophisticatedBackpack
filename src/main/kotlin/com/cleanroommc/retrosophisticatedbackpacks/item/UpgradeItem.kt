@@ -10,7 +10,7 @@ import net.minecraft.nbt.NBTTagCompound
 import net.minecraft.util.text.TextComponentTranslation
 import net.minecraft.world.World
 
-abstract class UpgradeItem(registryName: String, val hasTab: Boolean = false) : ItemBase() {
+abstract class UpgradeItem(registryName: String, val hasTab: Boolean = false, val upgradeGroup: String? = null) : ItemBase() {
     init {
         setCreativeTab(RetroSophisticatedBackpacks.CREATIVE_TAB)
         setRegistryName(registryName)

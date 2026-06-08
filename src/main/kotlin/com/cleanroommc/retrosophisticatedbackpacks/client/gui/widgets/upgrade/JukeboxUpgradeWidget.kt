@@ -9,12 +9,25 @@ import com.cleanroommc.retrosophisticatedbackpacks.capability.upgrade.JukeboxUpg
 import com.cleanroommc.retrosophisticatedbackpacks.capability.upgrade.RepeatMode
 import com.cleanroommc.retrosophisticatedbackpacks.client.gui.RSBTextures
 import com.cleanroommc.retrosophisticatedbackpacks.client.gui.widgets.CyclicVariantButtonWidget
+import com.cleanroommc.retrosophisticatedbackpacks.config.Config
 import com.cleanroommc.retrosophisticatedbackpacks.sync.UpgradeSlotSH
 import com.cleanroommc.retrosophisticatedbackpacks.util.Utils.asTranslationKey
 import net.minecraft.item.ItemStack
 
-class JukeboxUpgradeWidget(slotIndex: Int, wrapper: JukeboxUpgradeWrapper, stack: ItemStack, private val slots: Int) :
-    ExpandedUpgradeTabWidget<JukeboxUpgradeWrapper>(slotIndex, wrapper, if (slots > 4) 5 else 4, stack, wrapper.settingsLangKey, width = if (slots > 4) 112 else 80) {
+class JukeboxUpgradeWidget(
+    slotIndex: Int,
+    wrapper: JukeboxUpgradeWrapper,
+    stack: ItemStack,
+    private val slots: Int,
+    private val slotsInRow: Int = if (slots > 1) Config.advancedJukeboxUpgrade.slotsInRow.coerceIn(1, slots) else 1
+) : ExpandedUpgradeTabWidget<JukeboxUpgradeWrapper>(
+    slotIndex,
+    wrapper,
+    if (slots > 4) 5 else 4,
+    stack,
+    wrapper.settingsLangKey,
+    width = if (slots > 4) 112 else 80
+) {
     companion object {
         private const val SLOT_SIZE = 18
     }
@@ -32,7 +45,7 @@ class JukeboxUpgradeWidget(slotIndex: Int, wrapper: JukeboxUpgradeWrapper, stack
         val discs = SlotGroupWidget().name("jukebox_discs_$slotIndex").disableSortButtons()
         discs.flex().coverChildren().leftRel(0.5F).top(if (slots > 4) 74 else 72)
         repeat(slots) {
-            discs.child(ItemSlot().syncHandler("jukebox_discs_$slotIndex", it).pos(it % 4 * SLOT_SIZE, it / 4 * SLOT_SIZE))
+            discs.child(ItemSlot().syncHandler("jukebox_discs_$slotIndex", it).pos(it % slotsInRow * SLOT_SIZE, it / slotsInRow * SLOT_SIZE))
         }
         child(discs)
     }

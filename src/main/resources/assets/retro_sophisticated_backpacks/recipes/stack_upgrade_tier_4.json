@@ -2,7 +2,8 @@
   "type": "minecraft:crafting_shaped",
   "key": {
     "U": {
-      "item": "minecraft:nether_star"
+      "type": "forge:ore_dict",
+      "ore": "netherStar"
     },
     "B": {
       "item": "retro_sophisticated_backpacks:stack_upgrade_tier_3"

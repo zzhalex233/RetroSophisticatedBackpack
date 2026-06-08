@@ -6,7 +6,7 @@
     },
     "C": {
       "type": "forge:ore_dict",
-      "ore": "chest"
+      "ore": "chestWood"
     },
     "I": {
       "type": "forge:ore_dict",

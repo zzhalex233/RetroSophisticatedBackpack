@@ -12,6 +12,8 @@ import com.cleanroommc.retrosophisticatedbackpacks.RetroSophisticatedBackpacks
 import com.cleanroommc.retrosophisticatedbackpacks.backpack.BackpackInventoryHelper
 import com.cleanroommc.retrosophisticatedbackpacks.backpack.BackpackTier
 import com.cleanroommc.retrosophisticatedbackpacks.block.BackpackBlock
+import com.cleanroommc.retrosophisticatedbackpacks.capability.BackpackEnergyStorage
+import com.cleanroommc.retrosophisticatedbackpacks.capability.BackpackFluidHandler
 import com.cleanroommc.retrosophisticatedbackpacks.capability.BackpackWrapper
 import com.cleanroommc.retrosophisticatedbackpacks.capability.Capabilities
 import com.cleanroommc.retrosophisticatedbackpacks.client.BackpackBipedModel
@@ -20,6 +22,7 @@ import com.cleanroommc.retrosophisticatedbackpacks.common.gui.BackpackGuiHolder
 import com.cleanroommc.retrosophisticatedbackpacks.common.gui.PlayerInventoryGuiData
 import com.cleanroommc.retrosophisticatedbackpacks.common.gui.PlayerInventoryGuiData.InventoryType
 import com.cleanroommc.retrosophisticatedbackpacks.common.gui.PlayerInventoryGuiFactory
+import com.cleanroommc.retrosophisticatedbackpacks.config.Config
 import com.cleanroommc.retrosophisticatedbackpacks.handler.CapabilityHandler
 import com.cleanroommc.retrosophisticatedbackpacks.handler.RegistryHandler
 import com.cleanroommc.retrosophisticatedbackpacks.mixin.EntityItemAccessor
@@ -172,10 +175,16 @@ class BackpackItem(
     }
 
     override fun initCapabilities(stack: ItemStack, nbt: NBTTagCompound?): ICapabilityProvider {
-        val wrapper = BackpackWrapper(numberOfSlots, numberOfUpgradeSlots)
+        val wrapper = BackpackWrapper(numberOfSlots, numberOfUpgradeSlots, containerStack = stack)
         nbt?.let(wrapper::deserializeNBT)
         return wrapper
     }
+
+    override fun shouldCauseReequipAnimation(oldStack: ItemStack, newStack: ItemStack, slotChanged: Boolean): Boolean =
+        slotChanged || oldStack.item !== newStack.item || oldStack.metadata != newStack.metadata
+
+    override fun shouldCauseBlockBreakReset(oldStack: ItemStack, newStack: ItemStack): Boolean =
+        oldStack.item !== newStack.item || oldStack.metadata != newStack.metadata
 
     override fun onUpdate(stack: ItemStack, worldIn: World, entityIn: Entity, itemSlot: Int, isSelected: Boolean) {
         // Only cache on server
@@ -188,7 +197,7 @@ class BackpackItem(
             if (entityIn.ticksExisted % 5 == 0)
                 wrapper.tickUpgrades(entityIn, worldIn, entityIn.posX, entityIn.posY, entityIn.posZ)
 
-            if (!wrapper.isCached)
+            if (!Config.tickDedupeLogicDisabled && !wrapper.isCached)
                 CapabilityHandler.cacheBackpackInventory(wrapper)
         }
     }
@@ -270,35 +279,102 @@ class BackpackItem(
         tooltip: MutableList<String>,
         flagIn: ITooltipFlag
     ) {
-        tooltip.add(
-            TextComponentTranslation(
-                "tooltip.backpack.inventory_size".asTranslationKey(),
-                numberOfSlots()
-            ).formattedText
-        )
-        tooltip.add(
-            TextComponentTranslation(
-                "tooltip.backpack.upgrade_slots_size".asTranslationKey(),
-                numberOfUpgradeSlots()
-            ).formattedText
-        )
+        val wrapper = stack.getCapability(Capabilities.BACKPACK_CAPABILITY, null)
+        if (!Interactable.hasShiftDown()) {
+            tooltip.add(TextComponentTranslation("tooltip.shift_to_reveal".asTranslationKey()).formattedText)
+            return
+        }
 
-        if (Interactable.hasShiftDown()) {
-            val wrapper = stack.getCapability(Capabilities.BACKPACK_CAPABILITY, null) ?: return
-            val stackHint =
-                if (wrapper.isStackedByMultiplication()) "(xM)"
-                else "(+M)"
-
+        if (wrapper == null) {
+            tooltip.add(TextComponentTranslation("tooltip.backpack.inventory_size".asTranslationKey(), numberOfSlots()).formattedText)
             tooltip.add(
                 TextComponentTranslation(
-                    "tooltip.backpack.stack_multiplier".asTranslationKey(),
-                    wrapper.getTotalStackMultiplier(),
-                    TextComponentString(stackHint).setStyle(Style().setColor(TextFormatting.RED)).formattedText
+                    "tooltip.backpack.upgrade_slots_size".asTranslationKey(),
+                    numberOfUpgradeSlots()
                 ).formattedText
             )
-        } else {
-            tooltip.add(TextComponentTranslation("tooltip.shift_to_reveal".asTranslationKey()).formattedText)
+            return
         }
+
+        val itemStacks = wrapper.backpackItemStackHandler.inventory.filter { !it.isEmpty }
+        val upgradeStacks = wrapper.upgradeItemStackHandler.inventory.filter { !it.isEmpty }
+        val itemCount = itemStacks.fold(0) { total, itemStack -> total + itemStack.count }
+
+        tooltip.add(
+            TextComponentTranslation(
+                "tooltip.backpack.items".asTranslationKey(),
+                itemStacks.size,
+                wrapper.backpackInventorySize(),
+                itemCount
+            ).formattedText
+        )
+        tooltip.add(
+            TextComponentTranslation(
+                "tooltip.backpack.upgrades".asTranslationKey(),
+                upgradeStacks.size,
+                wrapper.upgradeSlotsSize()
+            ).formattedText
+        )
+        addStackMultiplierTooltip(wrapper, tooltip)
+        addFluidTooltip(wrapper, tooltip)
+        addEnergyTooltip(wrapper, tooltip)
+        if (itemStacks.isEmpty() && upgradeStacks.isEmpty()) {
+            tooltip.add(TextComponentTranslation("tooltip.backpack.empty".asTranslationKey()).formattedText)
+        }
+    }
+
+    private fun addStackMultiplierTooltip(wrapper: BackpackWrapper, tooltip: MutableList<String>) {
+        val multiplier = wrapper.getTotalStackMultiplier()
+        if (multiplier <= 1) {
+            return
+        }
+        val stackHint =
+            if (wrapper.isStackedByMultiplication()) "(xM)"
+            else "(+M)"
+
+        tooltip.add(
+            TextComponentTranslation(
+                "tooltip.backpack.stack_multiplier".asTranslationKey(),
+                multiplier,
+                TextComponentString(stackHint).setStyle(Style().setColor(TextFormatting.RED)).formattedText
+            ).formattedText
+        )
+    }
+
+    private fun addFluidTooltip(wrapper: BackpackWrapper, tooltip: MutableList<String>) {
+        if (!wrapper.hasTankUpgrade()) {
+            return
+        }
+        val tanks = BackpackFluidHandler(wrapper).tankProperties
+        for (tank in tanks) {
+            val contents = tank.contents
+            tooltip.add(
+                if (contents == null || contents.amount <= 0) {
+                    TextComponentTranslation("tooltip.backpack.fluid_empty".asTranslationKey(), 0, tank.capacity).formattedText
+                } else {
+                    TextComponentTranslation(
+                        "tooltip.backpack.fluid".asTranslationKey(),
+                        contents.amount,
+                        tank.capacity,
+                        contents.localizedName
+                    ).formattedText
+                }
+            )
+        }
+    }
+
+    private fun addEnergyTooltip(wrapper: BackpackWrapper, tooltip: MutableList<String>) {
+        if (!wrapper.hasBatteryUpgrade()) {
+            return
+        }
+        val energy = BackpackEnergyStorage(wrapper)
+        tooltip.add(
+            TextComponentTranslation(
+                "tooltip.backpack.energy".asTranslationKey(),
+                energy.energyStored,
+                energy.maxEnergyStored
+            ).formattedText
+        )
     }
 
     override fun buildUI(

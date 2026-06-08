@@ -1,6 +1,7 @@
 package com.cleanroommc.retrosophisticatedbackpacks.capability;
 
 import com.cleanroommc.retrosophisticatedbackpacks.capability.upgrade.*;
+import com.cleanroommc.retrosophisticatedbackpacks.capability.upgrade.mobcatcher.MobCatcherUpgradeWrapper;
 import net.minecraftforge.common.capabilities.Capability;
 import net.minecraftforge.common.capabilities.CapabilityInject;
 import org.jetbrains.annotations.NotNull;
@@ -97,6 +98,9 @@ public final class Capabilities {
 
     @CapabilityInject(AnvilUpgradeWrapper.class)
     public static final @NotNull Capability<AnvilUpgradeWrapper> ANVIL_UPGRADE_CAPABILITY = null;
+
+    @CapabilityInject(MobCatcherUpgradeWrapper.class)
+    public static final @NotNull Capability<MobCatcherUpgradeWrapper> MOB_CATCHER_UPGRADE_CAPABILITY = null;
 
     // Abstract capabilities
     @CapabilityInject(UpgradeWrapper.class)

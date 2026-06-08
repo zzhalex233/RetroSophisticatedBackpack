@@ -1,11 +1,12 @@
 package com.cleanroommc.retrosophisticatedbackpacks.inventory
 
 import com.cleanroommc.retrosophisticatedbackpacks.capability.Capabilities
+import com.cleanroommc.retrosophisticatedbackpacks.capability.BackpackWrapper
 import net.minecraft.item.ItemStack
 import net.minecraft.util.NonNullList
 import net.minecraftforge.items.ItemStackHandler
 
-class UpgradeItemStackHandler(size: Int) : ItemStackHandler(size) {
+class UpgradeItemStackHandler(size: Int, private val wrapper: BackpackWrapper? = null) : ItemStackHandler(size) {
     val inventory: NonNullList<ItemStack> =
         stacks
 
@@ -15,6 +16,7 @@ class UpgradeItemStackHandler(size: Int) : ItemStackHandler(size) {
             original.getCapability(Capabilities.UPGRADE_CAPABILITY, null)?.onBeforeRemoved()
         }
         super.setStackInSlot(slot, stack)
+        wrapper?.ensureCapturedMobLayoutCurrent()
     }
 
     override fun extractItem(slot: Int, amount: Int, simulate: Boolean): ItemStack {
@@ -24,6 +26,10 @@ class UpgradeItemStackHandler(size: Int) : ItemStackHandler(size) {
                 original.getCapability(Capabilities.UPGRADE_CAPABILITY, null)?.onBeforeRemoved()
             }
         }
-        return super.extractItem(slot, amount, simulate)
+        return super.extractItem(slot, amount, simulate).also {
+            if (!simulate && !it.isEmpty) {
+                wrapper?.ensureCapturedMobLayoutCurrent()
+            }
+        }
     }
 }

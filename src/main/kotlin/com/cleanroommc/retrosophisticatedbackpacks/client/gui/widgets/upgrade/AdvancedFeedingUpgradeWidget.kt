@@ -58,7 +58,7 @@ class AdvancedFeedingUpgradeWidget(
         }
 
         heartButtonWidget = CyclicVariantButtonWidget(HEART_VARIANTS, wrapper.healthFeedingStrategy.ordinal) {
-            wrapper.healthFeedingStrategy = AdvancedFeedingUpgradeWrapper.FeedingStrategy.HEALTH.entries[it]
+            wrapper.healthFeedingStrategy = AdvancedFeedingUpgradeWrapper.FeedingStrategy.Health.entries[it]
             updateWrapper()
         }
 

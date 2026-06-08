@@ -8,10 +8,12 @@ import com.cleanroommc.retrosophisticatedbackpacks.capability.Capabilities
 import com.cleanroommc.retrosophisticatedbackpacks.capability.BackpackWrapper
 import com.cleanroommc.retrosophisticatedbackpacks.capability.upgrade.EverlastingUpgradeWrapper
 import com.cleanroommc.retrosophisticatedbackpacks.capability.upgrade.IToolSwapperUpgrade
+import com.cleanroommc.retrosophisticatedbackpacks.capability.upgrade.mobcatcher.MobCatcherHandler
 import com.cleanroommc.retrosophisticatedbackpacks.item.BackpackItem
 import com.cleanroommc.retrosophisticatedbackpacks.mixin.EntityItemAccessor
 import net.minecraft.block.material.Material
 import net.minecraft.entity.item.EntityItem
+import net.minecraft.entity.EntityLivingBase
 import net.minecraft.init.SoundEvents
 import net.minecraft.item.ItemStack
 import net.minecraft.util.EnumActionResult
@@ -185,6 +187,14 @@ object EntityEventHandler {
 
         if (stack.item is BackpackItem) {
             if (player.isSneaking) {
+                if (entity is EntityLivingBase) {
+                    val captureResult = MobCatcherHandler.tryCapture(player, entity)
+                    if (captureResult != EnumActionResult.PASS) {
+                        event.isCanceled = true
+                        event.cancellationResult = captureResult
+                        return
+                    }
+                }
                 val wrapper = stack.getCapability(Capabilities.BACKPACK_CAPABILITY, null)
                     ?: return
                 var transferred = BackpackInventoryHelper.attemptDepositOnEntity(wrapper, entity)

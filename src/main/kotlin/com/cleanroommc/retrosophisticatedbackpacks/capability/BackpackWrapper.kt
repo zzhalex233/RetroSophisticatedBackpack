@@ -8,6 +8,9 @@ import com.cleanroommc.retrosophisticatedbackpacks.capability.upgrade.AdvancedCo
 import com.cleanroommc.retrosophisticatedbackpacks.capability.upgrade.AdvancedVoidUpgradeWrapper
 import com.cleanroommc.retrosophisticatedbackpacks.capability.upgrade.CompactingUpgradeWrapper
 import com.cleanroommc.retrosophisticatedbackpacks.capability.upgrade.VoidUpgradeWrapper
+import com.cleanroommc.retrosophisticatedbackpacks.capability.upgrade.mobcatcher.CapturedMob
+import com.cleanroommc.retrosophisticatedbackpacks.capability.upgrade.mobcatcher.MobCatcherStorage
+import com.cleanroommc.retrosophisticatedbackpacks.config.Config
 import com.cleanroommc.retrosophisticatedbackpacks.inventory.BackpackItemStackHandler
 import com.cleanroommc.retrosophisticatedbackpacks.inventory.ExposedItemStackHandler
 import com.cleanroommc.retrosophisticatedbackpacks.inventory.UpgradeItemStackHandler
@@ -32,6 +35,7 @@ import net.minecraft.util.SoundCategory
 import net.minecraft.util.math.AxisAlignedBB
 import net.minecraft.util.math.BlockPos
 import net.minecraft.util.text.ITextComponent
+import net.minecraft.util.text.TextComponentString
 import net.minecraft.util.text.TextComponentTranslation
 import net.minecraft.world.World
 import net.minecraftforge.common.capabilities.Capability
@@ -47,6 +51,7 @@ class BackpackWrapper(
     var backpackInventorySize: () -> Int = { 27 },
     var upgradeSlotsSize: () -> Int = { 1 },
     var uuid: UUID = UUID.randomUUID(),
+    private val containerStack: ItemStack = ItemStack.EMPTY,
 ) : IItemHandler, ISidelessCapabilityProvider, INBTSerializable<NBTTagCompound> {
     companion object {
         private const val BACKPACK_INVENTORY_TAG = "BackpackInventory"
@@ -56,7 +61,8 @@ class BackpackWrapper(
 
         private const val MAIN_COLOR_TAG = "MainColor"
         private const val ACCENT_COLOR_TAG = "AccentColor"
-        
+        private const val CUSTOM_NAME_TAG = "CustomName"
+
         private const val MEMORY_STACK_ITEMS_TAG = "MemoryItems"
         private const val MEMORY_STACK_RESPECT_NBT_TAG = "MemoryRespectNBT"
         private const val SORT_TYPE_TAG = "SortType"
@@ -66,13 +72,13 @@ class BackpackWrapper(
         private const val MAIN_SETTINGS_SHIFT_CLICK_INTO_OPEN_TAB_TAG = "ShiftClickIntoOpenTab"
         private const val MAIN_SETTINGS_KEEP_TAB_OPEN_TAG = "KeepTabOpen"
         private const val MAIN_SETTINGS_KEEP_SEARCH_PHRASE_TAG = "KeepSearchPhrase"
+        private const val MAIN_SETTINGS_SEARCH_PHRASE_TAG = "SearchPhrase"
         private const val MAIN_SETTINGS_ANOTHER_PLAYER_CAN_OPEN_TAG = "AnotherPlayerCanOpen"
         private const val ITEM_DISPLAY_SETTINGS_TAG = "ItemDisplay"
         private const val ITEM_DISPLAY_SLOTS_TAG = "Slots"
         private const val ITEM_DISPLAY_ROTATIONS_TAG = "Rotations"
         private const val ITEM_DISPLAY_COLOR_TAG = "Color"
         private const val ITEM_DISPLAY_SIDE_TAG = "DisplaySide"
-
         private const val UUID_TAG = "UUID"
 
         const val DEFAULT_MAIN_COLOR: Int = -0x339ec6
@@ -81,23 +87,28 @@ class BackpackWrapper(
 
     var isCached: Boolean = false
     var backpackItemStackHandler = BackpackItemStackHandler(backpackInventorySize(), this)
-    var upgradeItemStackHandler = UpgradeItemStackHandler(upgradeSlotsSize())
+    var upgradeItemStackHandler = UpgradeItemStackHandler(upgradeSlotsSize(), this)
     var sortType: SortType = SortType.BY_NAME
 
     var mainColor = DEFAULT_MAIN_COLOR
     var accentColor = DEFAULT_ACCENT_COLOR
+    var customName: String? = null
     var isGuiInteractionInProgress = false
     var settingsContext: SettingsContext = SettingsContext.PLAYER
     var shiftClickIntoOpenTab = false
     var keepTabOpen = true
     var keepSearchPhrase = false
-    var anotherPlayerCanOpen = false
+    var searchPhrase = ""
+    var anotherPlayerCanOpen = Config.allowOpeningOtherPlayerBackpacks
     var itemDisplayColor: EnumDyeColor = EnumDyeColor.RED
     var itemDisplaySide: DisplaySide = DisplaySide.FRONT
     private val itemDisplaySlots = linkedSetOf<Int>()
     private val itemDisplayRotations = mutableMapOf<Int, Int>()
     private val slotsToCompact = mutableSetOf<Int>()
     private val slotsToVoid = mutableSetOf<Int>()
+    val capturedMobs: MutableList<CapturedMob> = mutableListOf()
+    var capturedMobsColumns = 0
+    private var updatingCapturedMobLayout = false
 
     enum class SettingsContext {
         PLAYER,
@@ -130,6 +141,12 @@ class BackpackWrapper(
         return stackUpgradeItems.fold(base) { acc, item -> func(acc, item.multiplier()) }
     }
 
+    fun getTotalStackMultiplier(stack: ItemStack): Int =
+        if (Config.canStackWithStackUpgrade(stack)) getTotalStackMultiplier() else 1
+
+    fun getStackLimit(stack: ItemStack): Int =
+        stack.maxStackSize * getTotalStackMultiplier(stack)
+
     fun canAddStackUpgrade(newMultiplier: Int): Boolean {
         // Ensures no overflow for vanilla itemstack, no guarantee for modded itemstack
         val currentMultiplier = getTotalStackMultiplier() * 64
@@ -150,7 +167,7 @@ class BackpackWrapper(
         val newStackMultiplier = getTotalStackMultiplier() / oldMultiplier * newMultiplier
 
         for (stack in backpackItemStackHandler.inventory) {
-            if (stack.isEmpty)
+            if (stack.isEmpty || !Config.canStackWithStackUpgrade(stack))
                 continue
 
             if (stack.count > stack.maxStackSize * newStackMultiplier)
@@ -175,7 +192,7 @@ class BackpackWrapper(
         val byAddMultiplier = getTotalStackMultiplier(false)
 
         for (stack in backpackItemStackHandler.inventory) {
-            if (stack.isEmpty)
+            if (stack.isEmpty || !Config.canStackWithStackUpgrade(stack))
                 continue
 
             if (stack.count > stack.maxStackSize * byAddMultiplier)
@@ -222,6 +239,23 @@ class BackpackWrapper(
 
         return if (filterUpgrades.isEmpty()) true
         else filterUpgrades.any { it.canInsert(stack) }
+    }
+
+    fun ensureCapturedMobLayoutCurrent() {
+        if (updatingCapturedMobLayout)
+            return
+
+        updatingCapturedMobLayout = true
+        try {
+            MobCatcherStorage.ensureLayoutCurrent(this)
+        } finally {
+            updatingCapturedMobLayout = false
+        }
+    }
+
+    fun isSlotBlockedByMobCatcher(slotIndex: Int): Boolean {
+        ensureCapturedMobLayoutCurrent()
+        return MobCatcherStorage.isSlotBlocked(this, slotIndex)
     }
 
     fun onBeforeInsert(stack: ItemStack): ItemStack =
@@ -444,9 +478,12 @@ class BackpackWrapper(
     private fun insertIntoSimulation(simulation: ExposedItemStackHandler, stack: ItemStack): ItemStack {
         var remaining = stack
         for (slot in 0 until simulation.slots) {
+            if (isSlotBlockedByMobCatcher(slot)) {
+                continue
+            }
             val existing = simulation.getStackInSlot(slot)
             if (existing.isEmpty) {
-                val moved = minOf(remaining.count, remaining.maxStackSize * getTotalStackMultiplier())
+                val moved = minOf(remaining.count, getStackLimit(remaining))
                 simulation.setStackInSlot(slot, ItemHandlerHelper.copyStackWithSize(remaining, moved))
                 remaining = ItemHandlerHelper.copyStackWithSize(remaining, remaining.count - moved)
                 if (remaining.isEmpty) {
@@ -457,7 +494,7 @@ class BackpackWrapper(
             if (!ItemHandlerHelper.canItemStacksStack(existing, remaining)) {
                 continue
             }
-            val moved = minOf(remaining.count, existing.maxStackSize * getTotalStackMultiplier() - existing.count)
+            val moved = minOf(remaining.count, getStackLimit(existing) - existing.count)
             if (moved > 0) {
                 existing.grow(moved)
                 remaining = ItemHandlerHelper.copyStackWithSize(remaining, remaining.count - moved)
@@ -587,17 +624,24 @@ class BackpackWrapper(
 
     fun toggleKeepSearchPhrase() {
         keepSearchPhrase = !keepSearchPhrase
+        if (!keepSearchPhrase) {
+            searchPhrase = ""
+        }
     }
 
     fun toggleAnotherPlayerCanOpen() {
+        if (!Config.allowOpeningOtherPlayerBackpacks) {
+            anotherPlayerCanOpen = false
+            return
+        }
         anotherPlayerCanOpen = !anotherPlayerCanOpen
     }
 
     fun isItemDisplaySlotSelected(slotIndex: Int): Boolean =
-        slotIndex in itemDisplaySlots
+        !Config.itemDisplayDisabled && slotIndex in itemDisplaySlots
 
     fun selectItemDisplaySlot(slotIndex: Int) {
-        if (slotIndex !in 0 until backpackInventorySize() || slotIndex in itemDisplaySlots) {
+        if (Config.itemDisplayDisabled || slotIndex !in 0 until backpackInventorySize() || slotIndex in itemDisplaySlots) {
             return
         }
         if (itemDisplaySlots.size + 1 > 1) {
@@ -612,22 +656,25 @@ class BackpackWrapper(
     }
 
     fun getFirstItemDisplaySlot(): Int =
-        itemDisplaySlots.firstOrNull() ?: -1
+        if (Config.itemDisplayDisabled) -1 else itemDisplaySlots.firstOrNull() ?: -1
 
     fun getItemDisplaySlots(): Set<Int> =
-        itemDisplaySlots
+        if (Config.itemDisplayDisabled) emptySet() else itemDisplaySlots
 
     fun getItemDisplayRotation(slotIndex: Int): Int =
         itemDisplayRotations[slotIndex] ?: 0
 
     fun rotateItemDisplaySlot(slotIndex: Int, clockwise: Boolean) {
-        if (slotIndex !in itemDisplaySlots) {
+        if (Config.itemDisplayDisabled || slotIndex !in itemDisplaySlots) {
             return
         }
         itemDisplayRotations[slotIndex] = (getItemDisplayRotation(slotIndex) + if (clockwise) 45 else -45 + 360) % 360
     }
 
     fun getDisplayItem(): DisplayItem? {
+        if (Config.itemDisplayDisabled) {
+            return null
+        }
         val slotIndex = getFirstItemDisplaySlot()
         if (slotIndex !in 0 until backpackInventorySize()) {
             return null
@@ -642,12 +689,15 @@ class BackpackWrapper(
 
     // This is only meant to used for bogosorter as RSB already implemented a sorting mechanism
     fun getSortableSlotIndexes(): List<Int> =
-        (0..<backpackInventorySize()).filter { !backpackItemStackHandler.sortLockedSlots[it] && backpackItemStackHandler.memorizedSlotStack[it].isEmpty }
-
-    // Overrides
+        (0..<backpackInventorySize()).filter {
+            !isSlotBlockedByMobCatcher(it) &&
+                    !backpackItemStackHandler.sortLockedSlots[it] &&
+                    backpackItemStackHandler.memorizedSlotStack[it].isEmpty
+        }
 
     fun getDisplayName(): ITextComponent =
-        TextComponentTranslation("container.backpack".asTranslationKey())
+        if (customName != null) TextComponentString(customName!!)
+        else TextComponentTranslation("container.backpack".asTranslationKey())
 
     fun <T> gatherCapabilityUpgrades(capability: Capability<T>): List<T> =
         upgradeItemStackHandler.inventory
@@ -672,6 +722,12 @@ class BackpackWrapper(
     fun canAddBatteryUpgrade(): Boolean =
         !hasBatteryUpgrade()
 
+    fun hasMobCatcherUpgrade(): Boolean =
+        upgradeItemStackHandler.inventory.any { it.getCapability(Capabilities.MOB_CATCHER_UPGRADE_CAPABILITY, null) != null }
+
+    fun canAddMobCatcherUpgrade(): Boolean =
+        !hasMobCatcherUpgrade()
+
     fun canFitBatteryEnergyWithMultiplier(stackMultiplier: Int): Boolean =
         gatherCapabilityUpgrades(Capabilities.IBATTERY_UPGRADE_CAPABILITY)
             .all { it.energyStored <= it.getMaxEnergyStored(this, stackMultiplier) }
@@ -692,18 +748,20 @@ class BackpackWrapper(
         backpackItemStackHandler.getStackInSlot(index)
 
     override fun insertItem(slot: Int, stack: ItemStack, simulate: Boolean): ItemStack =
-        backpackItemStackHandler.insertItem(slot, stack, simulate)
+        if (isSlotBlockedByMobCatcher(slot)) stack else backpackItemStackHandler.insertItem(slot, stack, simulate)
 
     override fun extractItem(slot: Int, amount: Int, simulate: Boolean): ItemStack =
-        backpackItemStackHandler.extractItem(slot, amount, simulate)
+        if (isSlotBlockedByMobCatcher(slot)) ItemStack.EMPTY else backpackItemStackHandler.extractItem(slot, amount, simulate)
 
     override fun getSlotLimit(slot: Int): Int =
-        backpackItemStackHandler.getSlotLimit(slot)
+        if (isSlotBlockedByMobCatcher(slot)) 0 else backpackItemStackHandler.getSlotLimit(slot)
 
     override fun hasCapability(capability: Capability<*>, facing: EnumFacing?): Boolean =
         capability == Capabilities.BACKPACK_CAPABILITY ||
                 capability == CapabilityItemHandler.ITEM_HANDLER_CAPABILITY ||
-                capability == CapabilityFluidHandler.FLUID_HANDLER_CAPABILITY && hasTankUpgrade() ||
+                capability == CapabilityFluidHandler.FLUID_HANDLER_CAPABILITY && Config.itemFluidHandlerEnabled && hasTankUpgrade() ||
+                capability == CapabilityFluidHandler.FLUID_HANDLER_ITEM_CAPABILITY &&
+                Config.itemFluidHandlerEnabled && hasTankUpgrade() && !containerStack.isEmpty ||
                 capability == CapabilityEnergy.ENERGY && hasBatteryUpgrade()
 
     @Suppress("UNCHECKED_CAST")
@@ -712,7 +770,10 @@ class BackpackWrapper(
             capability == Capabilities.BACKPACK_CAPABILITY -> this as T
             capability == CapabilityItemHandler.ITEM_HANDLER_CAPABILITY -> this as T
             capability == CapabilityFluidHandler.FLUID_HANDLER_CAPABILITY &&
-                    hasTankUpgrade() -> BackpackFluidHandler(this) as T
+                    Config.itemFluidHandlerEnabled && hasTankUpgrade() -> BackpackFluidHandler(this) as T
+            capability == CapabilityFluidHandler.FLUID_HANDLER_ITEM_CAPABILITY &&
+                    Config.itemFluidHandlerEnabled && hasTankUpgrade() && !containerStack.isEmpty ->
+                BackpackFluidItemHandler(containerStack, this) as T
             capability == CapabilityEnergy.ENERGY && hasBatteryUpgrade() -> BackpackEnergyStorage(this) as T
             else -> null
         }
@@ -727,9 +788,11 @@ class BackpackWrapper(
         nbt.setTag(UPGRADE_SLOTS_TAG, upgradesNbt)
         nbt.setInteger(BACKPACK_INVENTORY_SIZE_TAG, backpackInventorySize())
         nbt.setInteger(UPGRADE_SLOTS_SIZE_TAG, upgradeSlotsSize())
-        
+
         nbt.setInteger(MAIN_COLOR_TAG, mainColor)
         nbt.setInteger(ACCENT_COLOR_TAG, accentColor)
+
+        customName?.let { nbt.setString(CUSTOM_NAME_TAG, it) }
 
         // Settings
         val memoryNbt = NBTTagCompound()
@@ -751,6 +814,9 @@ class BackpackWrapper(
         mainSettingsNbt.setBoolean(MAIN_SETTINGS_SHIFT_CLICK_INTO_OPEN_TAB_TAG, shiftClickIntoOpenTab)
         mainSettingsNbt.setBoolean(MAIN_SETTINGS_KEEP_TAB_OPEN_TAG, keepTabOpen)
         mainSettingsNbt.setBoolean(MAIN_SETTINGS_KEEP_SEARCH_PHRASE_TAG, keepSearchPhrase)
+        if (keepSearchPhrase && searchPhrase.isNotEmpty()) {
+            mainSettingsNbt.setString(MAIN_SETTINGS_SEARCH_PHRASE_TAG, searchPhrase)
+        }
         mainSettingsNbt.setBoolean(MAIN_SETTINGS_ANOTHER_PLAYER_CAN_OPEN_TAG, anotherPlayerCanOpen)
         nbt.setTag(MAIN_SETTINGS_TAG, mainSettingsNbt)
 
@@ -762,6 +828,9 @@ class BackpackWrapper(
         itemDisplayNbt.setByte(ITEM_DISPLAY_COLOR_TAG, itemDisplayColor.ordinal.toByte())
         itemDisplayNbt.setString(ITEM_DISPLAY_SIDE_TAG, itemDisplaySide.serializedName)
         nbt.setTag(ITEM_DISPLAY_SETTINGS_TAG, itemDisplayNbt)
+        ensureCapturedMobLayoutCurrent()
+        nbt.setTag(MobCatcherStorage.CAPTURED_MOBS_TAG, MobCatcherStorage.serialize(capturedMobs))
+        nbt.setInteger(MobCatcherStorage.CAPTURED_MOBS_COLUMNS_TAG, capturedMobsColumns)
 
         nbt.setUniqueId(UUID_TAG, uuid)
         return nbt
@@ -776,10 +845,13 @@ class BackpackWrapper(
         uuid = nbt.getUniqueId(UUID_TAG)!!
 
         backpackItemStackHandler = BackpackItemStackHandler(backpackInventorySize(), this)
-        upgradeItemStackHandler = UpgradeItemStackHandler(upgradeSlotsSize())
-        
+        upgradeItemStackHandler = UpgradeItemStackHandler(upgradeSlotsSize(), this)
+
         mainColor = nbt.getInteger(MAIN_COLOR_TAG)
         accentColor = nbt.getInteger(ACCENT_COLOR_TAG)
+
+        if (nbt.hasKey(CUSTOM_NAME_TAG))
+            customName = nbt.getString(CUSTOM_NAME_TAG)
 
         if (nbt.hasKey(BACKPACK_INVENTORY_TAG))
             BackpackItemStackHelper.loadAllItemsExtended(
@@ -817,7 +889,13 @@ class BackpackWrapper(
                 mainSettingsNbt.getBoolean(MAIN_SETTINGS_KEEP_TAB_OPEN_TAG)
             else true
             keepSearchPhrase = mainSettingsNbt.getBoolean(MAIN_SETTINGS_KEEP_SEARCH_PHRASE_TAG)
-            anotherPlayerCanOpen = mainSettingsNbt.getBoolean(MAIN_SETTINGS_ANOTHER_PLAYER_CAN_OPEN_TAG)
+            searchPhrase =
+                if (keepSearchPhrase && mainSettingsNbt.hasKey(MAIN_SETTINGS_SEARCH_PHRASE_TAG))
+                    mainSettingsNbt.getString(MAIN_SETTINGS_SEARCH_PHRASE_TAG)
+                else ""
+            anotherPlayerCanOpen = Config.allowOpeningOtherPlayerBackpacks &&
+                    (!mainSettingsNbt.hasKey(MAIN_SETTINGS_ANOTHER_PLAYER_CAN_OPEN_TAG) ||
+                            mainSettingsNbt.getBoolean(MAIN_SETTINGS_ANOTHER_PLAYER_CAN_OPEN_TAG))
         }
 
         itemDisplaySlots.clear()
@@ -837,6 +915,14 @@ class BackpackWrapper(
                 EnumDyeColor.RED
             }
             itemDisplaySide = DisplaySide.fromName(itemDisplayNbt.getString(ITEM_DISPLAY_SIDE_TAG))
+        }
+
+        capturedMobs.clear()
+        capturedMobs.addAll(MobCatcherStorage.deserialize(nbt.getTagList(MobCatcherStorage.CAPTURED_MOBS_TAG, 10)))
+        capturedMobsColumns = if (nbt.hasKey(MobCatcherStorage.CAPTURED_MOBS_COLUMNS_TAG)) {
+            nbt.getInteger(MobCatcherStorage.CAPTURED_MOBS_COLUMNS_TAG)
+        } else {
+            MobCatcherStorage.getColumns(this)
         }
 
         sortType = SortType.entries[nbt.getByte(SORT_TYPE_TAG).toInt()]

@@ -20,8 +20,10 @@ import net.minecraft.entity.player.EntityPlayerMP
 import net.minecraft.item.ItemStack
 import net.minecraft.nbt.NBTTagCompound
 import net.minecraft.network.PacketBuffer
+import net.minecraft.network.play.server.SPacketSetSlot
 import net.minecraftforge.fluids.FluidUtil
 import net.minecraftforge.items.IItemHandlerModifiable
+import net.minecraftforge.items.ItemHandlerHelper
 
 /**
  * Used to synchronize upgrade item's capability, this is only fired from client to reflect client's action to server
@@ -168,7 +170,7 @@ class UpgradeSlotSH(
         wrapper.hungerFeedingStrategy =
             buf.readEnumValue(AdvancedFeedingUpgradeWrapper.FeedingStrategy.Hunger::class.java)
         wrapper.healthFeedingStrategy =
-            buf.readEnumValue(AdvancedFeedingUpgradeWrapper.FeedingStrategy.HEALTH::class.java)
+            buf.readEnumValue(AdvancedFeedingUpgradeWrapper.FeedingStrategy.Health::class.java)
     }
 
     private fun updateFilterUpgrade(buf: PacketBuffer) {
@@ -297,7 +299,28 @@ class UpgradeSlotSH(
 
     private fun updateAnvilTakeResult() {
         val wrapper = anvil() ?: return
-        val player = slot.getSyncHandler().syncManager.player
-        wrapper.takeResult(player, player.world)
+        val player = slot.getSyncHandler().syncManager.player as? EntityPlayerMP ?: return
+        val preview = wrapper.updateRepairOutput(player, player.world)
+        val carried = player.inventory.itemStack
+        if (preview.isEmpty || !wrapper.canTakeResult(player) || !canPlaceAnvilResultOnCursor(carried, preview)) {
+            return
+        }
+
+        val taken = wrapper.takeResult(player, player.world)
+        if (taken.isEmpty) {
+            return
+        }
+        if (carried.isEmpty) {
+            player.inventory.itemStack = taken
+        } else {
+            carried.grow(taken.count)
+            player.inventory.itemStack = carried
+        }
+        player.connection.sendPacket(SPacketSetSlot(-1, -1, player.inventory.itemStack))
+        player.openContainer.detectAndSendChanges()
     }
+
+    private fun canPlaceAnvilResultOnCursor(carried: ItemStack, result: ItemStack): Boolean =
+        carried.isEmpty || ItemHandlerHelper.canItemStacksStack(carried, result) &&
+                carried.count + result.count <= carried.maxStackSize
 }

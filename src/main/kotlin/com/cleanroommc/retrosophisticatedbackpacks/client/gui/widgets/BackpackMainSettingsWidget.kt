@@ -11,6 +11,7 @@ import com.cleanroommc.modularui.widgets.ButtonWidget
 import com.cleanroommc.retrosophisticatedbackpacks.capability.BackpackWrapper
 import com.cleanroommc.retrosophisticatedbackpacks.client.gui.BackpackPanel
 import com.cleanroommc.retrosophisticatedbackpacks.client.gui.RSBTextures
+import com.cleanroommc.retrosophisticatedbackpacks.config.Config
 import com.cleanroommc.retrosophisticatedbackpacks.sync.BackpackSH
 import com.cleanroommc.retrosophisticatedbackpacks.util.Utils.asTranslationKey
 import com.cleanroommc.retrosophisticatedbackpacks.util.Utils.getThemeOrDefault
@@ -21,14 +22,14 @@ class BackpackMainSettingsWidget(
     private val panel: BackpackPanel,
     private val parentTabWidget: TabWidget
 ) : ExpandedTabWidget(
-    2,
+    3,
     RSBTextures.BACKPACK_SETTINGS_ICON,
     "gui.backpack_settings".asTranslationKey(),
     width = 93,
     expandDirection = ExpandDirection.RIGHT
 ) {
     private val contextButton = ContextButtonWidget(panel.backpackWrapper)
-        .pos(4, 20)
+        .pos(4, 24)
         .onMousePressed {
             if (it == 0) {
                 panel.backpackWrapper.toggleSettingsContext()
@@ -42,12 +43,14 @@ class BackpackMainSettingsWidget(
             val key = if (panel.backpackWrapper.settingsContext == BackpackWrapper.SettingsContext.PLAYER)
                 "gui.settings_button.context_player.tooltip"
             else "gui.settings_button.context_backpack.tooltip"
-            it.addLine(IKey.lang(key.asTranslationKey())).pos(RichTooltip.Pos.NEXT_TO_MOUSE)
+            it.addLine(IKey.lang(key.asTranslationKey()))
+                .addLine(IKey.lang("${key}_detail".asTranslationKey()).style(IKey.GRAY))
+                .pos(RichTooltip.Pos.NEXT_TO_MOUSE)
         }
 
     private val shiftClickButton = toggleButton(
         4,
-        42,
+        52,
         { panel.backpackWrapper.shiftClickIntoOpenTab },
         RSBTextures.SHIFT_CLICK_OPEN_TAB_ON,
         RSBTextures.SHIFT_CLICK_OPEN_TAB_OFF,
@@ -57,7 +60,7 @@ class BackpackMainSettingsWidget(
     )
     private val keepTabOpenButton = toggleButton(
         26,
-        42,
+        52,
         { panel.backpackWrapper.keepTabOpen },
         RSBTextures.KEEP_TAB_OPEN_ON,
         RSBTextures.KEEP_TAB_OPEN_OFF,
@@ -67,7 +70,7 @@ class BackpackMainSettingsWidget(
     )
     private val keepSearchPhraseButton = toggleButton(
         48,
-        42,
+        52,
         { panel.backpackWrapper.keepSearchPhrase },
         RSBTextures.KEEP_SEARCH_PHRASE_ON,
         RSBTextures.KEEP_SEARCH_PHRASE_OFF,
@@ -77,7 +80,7 @@ class BackpackMainSettingsWidget(
     )
     private val otherPlayerButton = toggleButton(
         70,
-        42,
+        52,
         { panel.backpackWrapper.anotherPlayerCanOpen },
         RSBTextures.ANOTHER_PLAYER_CAN_OPEN_ON,
         RSBTextures.ANOTHER_PLAYER_CAN_OPEN_OFF,
@@ -91,7 +94,9 @@ class BackpackMainSettingsWidget(
             .child(shiftClickButton)
             .child(keepTabOpenButton)
             .child(keepSearchPhraseButton)
-            .child(otherPlayerButton)
+        if (Config.allowOpeningOtherPlayerBackpacks) {
+            child(otherPlayerButton)
+        }
     }
 
     override fun updateTabState() {
@@ -125,6 +130,8 @@ class BackpackMainSettingsWidget(
                     IKey.lang(
                         "gui.settings_button.$tooltipName.${if (state()) "on" else "off"}".asTranslationKey()
                     )
+                ).addLine(
+                    IKey.lang("gui.settings_button.$tooltipName.detail".asTranslationKey()).style(IKey.GRAY)
                 ).pos(RichTooltip.Pos.NEXT_TO_MOUSE)
             }
 

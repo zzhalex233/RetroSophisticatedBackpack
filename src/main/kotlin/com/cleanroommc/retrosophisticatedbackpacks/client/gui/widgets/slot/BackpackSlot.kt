@@ -52,8 +52,20 @@ class BackpackSlot(private val panel: BackpackPanel, private val wrapper: Backpa
         get() = panel.isSortingSettingTabOpened
     private val isInItemDisplaySettingMode: Boolean
         get() = panel.isItemDisplaySettingTabOpened
+    private val isBlockedByCapturedMob: Boolean
+        get() = wrapper.isSlotBlockedByMobCatcher(slot.slotIndex)
+    private val isHiddenBySearch: Boolean
+        get() = !panel.isSearchSlotVisible(slot.slotIndex)
+
+    override fun onUpdate() {
+        super.onUpdate()
+        updateSearchPosition()
+    }
 
     override fun buildTooltip(stack: ItemStack, tooltip: RichTooltip) {
+        if (isBlockedByCapturedMob || isHiddenBySearch)
+            return
+
         val memorizedStack = wrapper.getMemorizedStack(slot.slotIndex)
 
         if (stack.isEmpty && memorizedStack.isEmpty)
@@ -105,6 +117,8 @@ class BackpackSlot(private val panel: BackpackPanel, private val wrapper: Backpa
 
     override fun onMousePressed(mouseButton: Int): Interactable.Result =
         when {
+            isBlockedByCapturedMob -> Interactable.Result.STOP
+            isHiddenBySearch -> Interactable.Result.STOP
             isInItemDisplaySettingMode -> handleItemDisplaySlotClick(mouseButton)
             isInMemorySettingMode -> handleMemorySlotClick(mouseButton)
             isInSortSettingMode -> handleSortSlotClick(mouseButton)
@@ -114,10 +128,13 @@ class BackpackSlot(private val panel: BackpackPanel, private val wrapper: Backpa
         }
 
     override fun onMouseRelease(mouseButton: Int): Boolean =
-        if (isInSettingMode) true
+        if (isBlockedByCapturedMob || isHiddenBySearch || isInSettingMode) true
         else super.onMouseRelease(mouseButton)
 
     override fun onMouseDrag(mouseButton: Int, timeSinceClick: Long) {
+        if (isBlockedByCapturedMob || isHiddenBySearch) {
+            return
+        }
         if (isInMemorySettingMode) {
             handleMemorySlotClick(mouseButton)
             return
@@ -203,6 +220,10 @@ class BackpackSlot(private val panel: BackpackPanel, private val wrapper: Backpa
     @SideOnly(Side.CLIENT)
     override fun draw(context: ModularGuiContext?, widgetThemeEntry: WidgetThemeEntry<*>?) {
         context?.let {
+            updateSearchPosition()
+            if (isBlockedByCapturedMob)
+                return
+
             val widgetTheme = widgetThemeEntry?.theme ?: WidgetTheme.getDefault().theme
 
             if (isInSettingMode) {
@@ -215,6 +236,9 @@ class BackpackSlot(private val panel: BackpackPanel, private val wrapper: Backpa
                 if (wrapper.isSlotLocked(slot.slotIndex))
                     drawLockedSlot(it, widgetTheme)
 
+                if (isHiddenBySearch)
+                    return
+
                 super.draw(context, widgetThemeEntry)
 
                 if (slot.stack.isEmpty && !memoryStack.isEmpty) {
@@ -224,6 +248,20 @@ class BackpackSlot(private val panel: BackpackPanel, private val wrapper: Backpa
                 drawStashSign()
             }
         }
+    }
+
+    private fun updateSearchPosition() {
+        if (!isSynced)
+            return
+
+        val slotIndex = slot.slotIndex
+        val x = panel.searchSlotX(slotIndex)
+        val y = panel.searchSlotY(slotIndex)
+        if (area.rx == x && area.ry == y)
+            return
+
+        area.rx = x
+        area.ry = y
     }
 
     private fun handleStashClick(): Boolean {
