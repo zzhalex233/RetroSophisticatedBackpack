@@ -140,12 +140,8 @@ object BackpackInventoryHelper {
                     continue
             }
 
-            stack = wrapper.backpackItemStackHandler.insertItemToMemorySlots(stack, false)
-            for (j in 0 until wrapper.backpackInventorySize()) {
-                stack = wrapper.insertItem(j, stack, false)
-                if (stack.isEmpty)
-                    break
-            }
+            stack = if (transferMatched) insertIntoMatchingBackpackSlots(wrapper, stack)
+            else insertIntoBackpackMatchingFirst(wrapper, stack)
 
             playerInventory.setStackInSlot(i, stack)
         }
@@ -164,20 +160,72 @@ object BackpackInventoryHelper {
             if (transferMatched && !handlerContains(playerInventory, stack, 0))
                 continue
 
-            val firstSlot = if (transferMatched) 0 else 9
-            for (j in firstSlot until playerInventory.slots) {
-                stack = playerInventory.insertItem(j, stack, false)
-                if (stack.isEmpty)
-                    break
-            }
+            stack = if (transferMatched) insertIntoMatchingHandlerSlots(playerInventory, stack, 0)
+            else insertIntoHandlerMatchingFirst(playerInventory, stack, 9)
 
             wrapper.backpackItemStackHandler.setStackInSlot(i, stack)
         }
     }
 
+    private fun insertIntoBackpackMatchingFirst(wrapper: BackpackWrapper, stack: ItemStack): ItemStack {
+        var stack = insertIntoMatchingBackpackSlots(wrapper, stack)
+        for (slot in 0 until wrapper.backpackInventorySize()) {
+            stack = wrapper.insertItem(slot, stack, false)
+            if (stack.isEmpty)
+                break
+        }
+        return stack
+    }
+
+    private fun insertIntoMatchingBackpackSlots(wrapper: BackpackWrapper, stack: ItemStack): ItemStack {
+        var stack = stack
+        for (slot in 0 until wrapper.backpackInventorySize()) {
+            if (!matchesStackKey(wrapper.getStackInSlot(slot), stack))
+                continue
+
+            stack = wrapper.insertItem(slot, stack, false)
+            if (stack.isEmpty)
+                return stack
+        }
+
+        for (slot in 0 until wrapper.backpackInventorySize()) {
+            if (!matchesMemorySlot(wrapper, slot, stack))
+                continue
+
+            stack = wrapper.insertItem(slot, stack, false)
+            if (stack.isEmpty)
+                return stack
+        }
+
+        return stack
+    }
+
+    private fun insertIntoHandlerMatchingFirst(handler: IItemHandlerModifiable, stack: ItemStack, firstSlot: Int): ItemStack {
+        var stack = insertIntoMatchingHandlerSlots(handler, stack, firstSlot)
+        for (slot in firstSlot until handler.slots) {
+            stack = handler.insertItem(slot, stack, false)
+            if (stack.isEmpty)
+                break
+        }
+        return stack
+    }
+
+    private fun insertIntoMatchingHandlerSlots(handler: IItemHandlerModifiable, stack: ItemStack, firstSlot: Int): ItemStack {
+        var stack = stack
+        for (slot in firstSlot until handler.slots) {
+            if (!matchesStackKey(handler.getStackInSlot(slot), stack))
+                continue
+
+            stack = handler.insertItem(slot, stack, false)
+            if (stack.isEmpty)
+                break
+        }
+        return stack
+    }
+
     private fun backpackContainsOrMemory(wrapper: BackpackWrapper, stack: ItemStack): Boolean =
         handlerContains(wrapper.backpackItemStackHandler, stack, 0) ||
-                wrapper.backpackItemStackHandler.memorizedSlotStack.any { matchesStackKey(it, stack) }
+                wrapper.backpackItemStackHandler.memorizedSlotStack.indices.any { matchesMemorySlot(wrapper, it, stack) }
 
     private fun handlerContains(handler: IItemHandler, stack: ItemStack, firstSlot: Int): Boolean {
         for (slot in firstSlot until handler.slots) {
@@ -192,6 +240,14 @@ object BackpackInventoryHelper {
         !first.isEmpty && !second.isEmpty &&
                 ItemStack.areItemsEqual(first, second) &&
                 ItemStack.areItemStackTagsEqual(first, second)
+
+    private fun matchesMemorySlot(wrapper: BackpackWrapper, slot: Int, stack: ItemStack): Boolean {
+        val memoryStack = wrapper.backpackItemStackHandler.memorizedSlotStack[slot]
+        return !memoryStack.isEmpty && !stack.isEmpty &&
+                if (wrapper.backpackItemStackHandler.memorizedSlotRespectNbtList[slot])
+                    ItemStack.areItemStacksEqual(stack, memoryStack)
+                else stack.isItemEqualIgnoreDurability(memoryStack)
+    }
 
     fun attemptDepositOnTileEntity(wrapper: BackpackWrapper, destination: TileEntity, facing: EnumFacing): Boolean {
         if (Config.isInteractionBlockDisallowed(destination.blockType)) {

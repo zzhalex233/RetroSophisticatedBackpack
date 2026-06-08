@@ -43,9 +43,10 @@ import com.cleanroommc.retrosophisticatedbackpacks.util.Utils.asTranslationKey
 import com.cleanroommc.retrosophisticatedbackpacks.util.Utils.ceilDiv
 import com.cleanroommc.retrosophisticatedbackpacks.util.Utils.setEnabledIfAndEnabled
 import net.minecraft.client.Minecraft
+import net.minecraft.client.gui.Gui
+import net.minecraft.client.gui.ScaledResolution
 import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.item.ItemStack
-import net.minecraft.client.gui.Gui
 import net.minecraft.client.renderer.GlStateManager
 import net.minecraft.client.util.ITooltipFlag
 import net.minecraft.util.text.TextFormatting
@@ -73,7 +74,6 @@ class BackpackPanel(
         private const val SEARCH_BOX_ANIMATION_MS = 200L
         internal const val DISABLED_SLOT_X_POS = -2000
         internal const val VISIBLE_BACKPACK_ROWS = 5
-        internal const val PLAYER_INVENTORY_BOTTOM = 8
         internal const val INVENTORY_CONTROL_COLUMNS = 2
         private val SORT_TYPE_VARIANTS = listOf(
             CyclicVariantButtonWidget.Variant(
@@ -145,7 +145,9 @@ class BackpackPanel(
     val playerInventoryLabelX: Int
         get() = 8 + playerInventoryXOffset
     val playerInventoryLabelY: Int
-        get() = area.height - 94
+        get() = panelHeight - 94
+    private val playerInventorySlotsY: Int
+        get() = playerInventoryLabelY + 11
     val panelWidth: Int
         get() = 14 + backgroundRowSize * SLOT_SIZE + inventoryScrollbarWidth
     val panelHeight: Int
@@ -170,6 +172,7 @@ class BackpackPanel(
     private var rebuildWidgetsQueued = false
     private var lastUpgradeStructureSignature = emptyList<String>()
     private var reopenBackpackQueued = false
+    private var lastScaledHeight = 0
     private val searchSlotDisplayIndices = IntArray(backpackWrapper.backpackInventorySize()) { it }
     private var searchVisibleSlots = backpackWrapper.backpackInventorySize()
     private var lastSearchLayoutKey = ""
@@ -201,6 +204,7 @@ class BackpackPanel(
 
     override fun onUpdate() {
         super.onUpdate()
+        refreshLayoutIfScreenHeightChanged()
         updateSearchLayout()
         if (!rebuildWidgetsQueued)
             queueRebuildIfUpgradeStructureChanged()
@@ -283,7 +287,7 @@ class BackpackPanel(
         backgroundRowSize = if (backpackWrapper.backpackInventorySize() > 81) 12 else 9
         rowSize = (backgroundRowSize - inventoryColumnsTaken).coerceAtLeast(1)
         colSize = backpackWrapper.backpackInventorySize().ceilDiv(rowSize)
-        visibleColSize = min(colSize, VISIBLE_BACKPACK_ROWS)
+        visibleColSize = min(colSize, maxVisibleBackpackRows())
         backpackSlotsWidth = rowSize * SLOT_SIZE
         inventoryScrollbarWidth = if (colSize > visibleColSize) BackpackInventoryScrollWidget.SCROLLBAR_WIDTH else 0
         inventoryAreaWidth = backgroundRowSize * SLOT_SIZE + inventoryScrollbarWidth
@@ -304,8 +308,22 @@ class BackpackPanel(
             }
     }
 
+    private fun refreshLayoutIfScreenHeightChanged() {
+        val scaledHeight = ScaledResolution(Minecraft.getMinecraft()).scaledHeight
+        if (scaledHeight == lastScaledHeight)
+            return
+
+        lastScaledHeight = scaledHeight
+        rebuildWidgetsQueued = true
+    }
+
+    private fun maxVisibleBackpackRows(): Int =
+        ((ScaledResolution(Minecraft.getMinecraft()).scaledHeight - HEIGHT_WITHOUT_STORAGE_SLOTS) / SLOT_SIZE)
+            .coerceAtLeast(1)
+
     init {
         recalculateLayout()
+        lastScaledHeight = ScaledResolution(Minecraft.getMinecraft()).scaledHeight
         syncManager.syncValue("backpack_wrapper", backpackSyncHandler)
 
         // Backpack slots
@@ -519,11 +537,11 @@ class BackpackPanel(
 
     internal fun addPlayerInventoryWidgets() {
         child(
-            SlotGroupWidget.playerInventory(PLAYER_INVENTORY_BOTTOM - 1, false) { _, _ ->
+            SlotGroupWidget.playerInventory(0, false) { _, _ ->
                 NoBackgroundItemSlot()
             }
                 .disableSortButtons()
-                .left(playerInventoryLabelX - 1)
+                .pos(playerInventoryLabelX - 1, playerInventorySlotsY)
         )
     }
 

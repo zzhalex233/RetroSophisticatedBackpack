@@ -20,8 +20,8 @@ class SettingTabWidget : Widget<SettingTabWidget>(), Interactable {
 
     init {
         size(TAB_TEXTURE.width, TAB_TEXTURE.height)
-            .right(-TAB_TEXTURE.width + 2)
-            .top(0)
+            .right(-TAB_TEXTURE.width + 4)
+            .top(TabWidget.TAB_TOP_OFFSET)
             .background(TAB_TEXTURE.get(-1, false))
             .tooltipStatic {
                 it.addLine(IKey.lang("gui.settings".asTranslationKey()))

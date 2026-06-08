@@ -20,6 +20,8 @@ class TabWidget(
     SingleChildWidget<TabWidget>(), Interactable {
     companion object {
         val TAB_TEXTURE: TabTexture = GuiTextures.TAB_RIGHT
+        const val TAB_TOP_OFFSET = 4
+        const val TAB_VERTICAL_SPACE = 1
     }
 
     var showExpanded = false
@@ -48,11 +50,14 @@ class TabWidget(
     var onToggle: ((Boolean) -> Unit)? = null
 
     init {
-        size(TAB_TEXTURE.width, TAB_TEXTURE.height).top({ tabOrder * 30.0 }, Unit.Measure.PIXEL)
+        size(TAB_TEXTURE.width, TAB_TEXTURE.height)
+            .top({
+                (TAB_TOP_OFFSET + (tabOrder - 1).coerceAtLeast(0) * (TAB_TEXTURE.height + TAB_VERTICAL_SPACE)).toDouble()
+            }, Unit.Measure.PIXEL)
 
         when (expandDirection) {
             ExpandDirection.LEFT -> left(-TAB_TEXTURE.width - 2)
-            ExpandDirection.RIGHT -> right(-TAB_TEXTURE.width + 2)
+            ExpandDirection.RIGHT -> right(-TAB_TEXTURE.width + 4)
         }
     }
 
