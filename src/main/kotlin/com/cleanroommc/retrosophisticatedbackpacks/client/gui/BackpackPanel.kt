@@ -360,9 +360,8 @@ class BackpackPanel(
         }
     }
 
-    internal fun addTexts(player: EntityPlayer) {
-        // TODO: Delegates to itemstack or tileentity's display name
-        child(TextWidget(StringKey(backpackWrapper.getDisplayName().formattedText)).pos(8, 6))
+    internal fun addTexts(player: EntityPlayer, backpackName: String) {
+        child(TextWidget(StringKey(backpackName)).pos(8, 6))
         child(TextWidget(StringKey(player.inventory.displayName.formattedText)).pos(8, 18 + colSize * 18))
     }
 

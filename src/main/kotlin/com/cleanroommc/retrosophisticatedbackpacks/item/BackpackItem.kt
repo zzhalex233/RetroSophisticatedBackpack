@@ -176,13 +176,13 @@ class BackpackItem(
     }
 
     override fun onUpdate(stack: ItemStack, worldIn: World, entityIn: Entity, itemSlot: Int, isSelected: Boolean) {
-        // Only cache on server
         if (!worldIn.isRemote && entityIn is EntityPlayerMP) {
             val wrapper = stack.getCapability(Capabilities.BACKPACK_CAPABILITY, null) ?: return
 
             if (entityIn.ticksExisted % 20 == 0)
                 wrapper.feed(entityIn, wrapper)
 
+            // Only cache on server
             if (!wrapper.isCached)
                 CapabilityHandler.cacheBackpackInventory(wrapper)
         }

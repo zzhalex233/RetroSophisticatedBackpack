@@ -37,14 +37,14 @@ sealed class BackpackGuiHolder(protected val backpackWrapper: BackpackWrapper) {
             inventoryType?.let { if (it == InventoryType.PLAYER_INVENTORY) slotIndex else null },
         )
 
-    protected fun addCommonWidgets(panel: BackpackPanel, player: EntityPlayer) {
+    protected fun addCommonWidgets(panel: BackpackPanel, player: EntityPlayer, backpackName: String) {
         panel.addSortingButtons()
         panel.addTransferButtons()
         panel.addBackpackInventorySlots()
         panel.addUpgradeSlots()
         panel.addSettingTab()
         panel.addUpgradeTabs()
-        panel.addTexts(player)
+        panel.addTexts(player, backpackName)
     }
 
     class TileEntityGuiHolder(backpackWrapper: BackpackWrapper) : BackpackGuiHolder(backpackWrapper),
@@ -56,7 +56,7 @@ sealed class BackpackGuiHolder(protected val backpackWrapper: BackpackWrapper) {
         ): ModularPanel {
             val tileEntity = data.world.getTileEntity(data.blockPos) as BackpackTileEntity
             val panel = createPanel(syncManager, data.player, tileEntity)
-            addCommonWidgets(panel, data.player)
+            addCommonWidgets(panel, data.player, tileEntity.displayName.formattedText)
             return panel
         }
     }
@@ -69,7 +69,7 @@ sealed class BackpackGuiHolder(protected val backpackWrapper: BackpackWrapper) {
             uiSettings: UISettings
         ): ModularPanel {
             val panel = createPanel(syncManager, data.player, null, data.inventoryType, data.slotIndex)
-            addCommonWidgets(panel, data.player)
+            addCommonWidgets(panel, data.player, data.usedItemStack.displayName)
             panel.modifyPlayerSlot(syncManager, data.inventoryType, data.slotIndex, data.player)
             return panel
         }

@@ -95,14 +95,11 @@ class BackpackTileEntity(val wrapper: BackpackWrapper = BackpackWrapper()) :
         return holder.buildUI(data, syncManager, uiSettings)
     }
 
-    override fun hasCustomName(): Boolean =
-        wrapper.customName != null
-
     override fun getName(): String =
-        if (hasCustomName()) wrapper.customName!! else "container.backpack"
+        if (hasCustomName()) customName else "container.backpack".asTranslationKey()
 
     override fun getDisplayName(): ITextComponent =
-        if (hasCustomName()) TextComponentString(name)
+        if (hasCustomName()) TextComponentString(customName)
         else TextComponentTranslation("container.backpack".asTranslationKey())
 
     override fun getSlots(): Int =
