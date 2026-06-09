@@ -14,6 +14,7 @@ import net.minecraft.world.World
 import net.minecraftforge.common.capabilities.Capability
 import net.minecraftforge.fluids.FluidStack
 import net.minecraftforge.fluids.FluidUtil
+import net.minecraftforge.fluids.capability.IFluidHandlerItem
 import net.minecraftforge.fluids.capability.IFluidTankProperties
 import net.minecraftforge.fluids.capability.FluidTankProperties
 import net.minecraftforge.items.IItemHandler
@@ -33,6 +34,7 @@ class TankUpgradeWrapper : UpgradeWrapper<TankUpgradeItem>(), ITankUpgrade {
     override val settingsLangKey = "gui.tank_settings".asTranslationKey()
     override val tankCapacity = Config.tankUpgrade.capacityPerSlotRow * 3
     private var fluid: FluidStack? = null
+    private var nextContainerActionTime = 0L
     private val inventory = object : ExposedItemStackHandler(4) {
         override fun isItemValid(slot: Int, stack: ItemStack): Boolean =
             slot == INPUT_RESULT_SLOT || slot == OUTPUT_RESULT_SLOT || stack.isEmpty || FluidUtil.getFluidHandler(stack) != null
@@ -97,11 +99,15 @@ class TankUpgradeWrapper : UpgradeWrapper<TankUpgradeItem>(), ITankUpgrade {
     }
 
     override fun tick(wrapper: BackpackWrapper, world: World) {
-        if (world.totalWorldTime % Config.tankUpgrade.autoFillDrainContainerCooldown.coerceAtLeast(1).toLong() != 0L) {
+        if (world.totalWorldTime < nextContainerActionTime) {
             return
         }
-        tryDrainInput(wrapper)
-        tryFillOutput(wrapper)
+        var didSomething = tryDrainInput(wrapper)
+        didSomething = tryFillOutput(wrapper) || didSomething
+        if (didSomething) {
+            nextContainerActionTime =
+                world.totalWorldTime + Config.tankUpgrade.autoFillDrainContainerCooldown.coerceAtLeast(1)
+        }
     }
 
     override fun getInventory(): IItemHandler =
@@ -127,16 +133,19 @@ class TankUpgradeWrapper : UpgradeWrapper<TankUpgradeItem>(), ITankUpgrade {
             return false
         }
         val single = ItemHandlerHelper.copyStackWithSize(stack, 1)
-        val handler = FluidUtil.getFluidHandler(single) ?: return false
-        if (!drainHandler(wrapper, handler, true)) {
+        if (stack.count > 1 && !drainStack(wrapper, single, true, true, {})) {
             return false
         }
-        stack.shrink(1)
-        if (stack.isEmpty) {
-            inventory.setStackInSlot(INPUT_SLOT, ItemStack.EMPTY)
+        return drainStack(wrapper, single, true, false) { container ->
+            if (stack.count > 1) {
+                stack.shrink(1)
+                if (stack.isEmpty) {
+                    inventory.setStackInSlot(INPUT_SLOT, ItemStack.EMPTY)
+                }
+            } else {
+                inventory.setStackInSlot(INPUT_SLOT, container)
+            }
         }
-        inventory.insertItem(INPUT_RESULT_SLOT, handler.container, false)
-        return true
     }
 
     private fun tryFillOutput(wrapper: BackpackWrapper): Boolean {
@@ -145,53 +154,142 @@ class TankUpgradeWrapper : UpgradeWrapper<TankUpgradeItem>(), ITankUpgrade {
             return false
         }
         val single = ItemHandlerHelper.copyStackWithSize(stack, 1)
-        val handler = FluidUtil.getFluidHandler(single) ?: return false
-        if (!fillHandler(wrapper, handler, true)) {
+        if (stack.count > 1 && !fillStack(wrapper, single, true, true, {})) {
             return false
         }
-        stack.shrink(1)
-        if (stack.isEmpty) {
-            inventory.setStackInSlot(OUTPUT_SLOT, ItemStack.EMPTY)
+        return fillStack(wrapper, single, true, false) { container ->
+            if (stack.count > 1) {
+                stack.shrink(1)
+                if (stack.isEmpty) {
+                    inventory.setStackInSlot(OUTPUT_SLOT, ItemStack.EMPTY)
+                }
+            } else {
+                inventory.setStackInSlot(OUTPUT_SLOT, container)
+            }
         }
-        inventory.insertItem(OUTPUT_RESULT_SLOT, handler.container, false)
-        return true
     }
 
-    private fun drainHandler(wrapper: BackpackWrapper, handler: net.minecraftforge.fluids.capability.IFluidHandlerItem, moveResult: Boolean): Boolean {
-        val extracted = if (fluid == null) handler.drain(getMaxInOut(wrapper), false) else handler.drain(FluidStack(fluid!!.fluid, getTankCapacity(wrapper) - fluid!!.amount), false)
+    private fun drainStack(
+        wrapper: BackpackWrapper,
+        stack: ItemStack,
+        moveResult: Boolean,
+        requireFullDrain: Boolean,
+        updateContainerStack: (ItemStack) -> Unit
+    ): Boolean =
+        FluidUtil.getFluidHandler(stack)?.let { drainHandler(wrapper, it, moveResult, requireFullDrain, updateContainerStack) } ?: false
+
+    private fun fillStack(
+        wrapper: BackpackWrapper,
+        stack: ItemStack,
+        moveResult: Boolean,
+        requireFullFill: Boolean,
+        updateContainerStack: (ItemStack) -> Unit
+    ): Boolean =
+        FluidUtil.getFluidHandler(stack)?.let { fillHandler(wrapper, it, moveResult, requireFullFill, updateContainerStack) } ?: false
+
+    private fun drainHandler(
+        wrapper: BackpackWrapper,
+        handler: IFluidHandlerItem,
+        moveResult: Boolean,
+        requireFullDrain: Boolean = false,
+        updateContainerStack: (ItemStack) -> Unit = {}
+    ): Boolean {
+        val current = fluid
+        val toDrain = if (current == null) BUCKET else minOf(BUCKET, getTankCapacity(wrapper) - current.amount)
+        val extracted = if (current == null) handler.drain(toDrain, false) else handler.drain(FluidStack(current.fluid, toDrain, current.tag?.copy()), false)
         if (extracted == null || extracted.amount <= 0 || fill(wrapper, extracted, false) <= 0) {
+            return false
+        }
+        if (requireFullDrain && fill(wrapper, extracted, false) != firstTankCapacity(handler)) {
             return false
         }
         if (moveResult) {
             val preview = FluidUtil.getFluidHandler(handler.container.copy()) ?: return false
             val filled = fill(wrapper, extracted, false)
             preview.drain(FluidStack(extracted.fluid, filled, extracted.tag?.copy()), true)
-            if (!inventory.insertItem(INPUT_RESULT_SLOT, preview.container, true).isEmpty) {
+            val movesToResult = hasNoMatchingFluid(preview)
+            if (requireFullDrain && !movesToResult) {
+                return false
+            }
+            if (movesToResult && !inventory.insertItem(INPUT_RESULT_SLOT, preview.container, true).isEmpty) {
                 return false
             }
         }
+        if (requireFullDrain) {
+            return true
+        }
         val filled = fill(wrapper, extracted, true)
         handler.drain(FluidStack(extracted.fluid, filled, extracted.tag?.copy()), true)
+        val resultHandler = FluidUtil.getFluidHandler(handler.container.copy())
+        if (moveResult && (resultHandler?.let(::hasNoMatchingFluid) ?: true)) {
+            updateContainerStack(ItemStack.EMPTY)
+            inventory.insertItem(INPUT_RESULT_SLOT, handler.container, false)
+        } else {
+            updateContainerStack(handler.container)
+        }
         return true
     }
 
-    private fun fillHandler(wrapper: BackpackWrapper, handler: net.minecraftforge.fluids.capability.IFluidHandlerItem, moveResult: Boolean): Boolean {
+    private fun fillHandler(
+        wrapper: BackpackWrapper,
+        handler: IFluidHandlerItem,
+        moveResult: Boolean,
+        requireFullFill: Boolean = false,
+        updateContainerStack: (ItemStack) -> Unit = {}
+    ): Boolean {
         val current = fluid ?: return false
-        val filled = handler.fill(FluidStack(current.fluid, minOf(getMaxInOut(wrapper), current.amount), current.tag?.copy()), false)
+        val filled = handler.fill(FluidStack(current.fluid, minOf(BUCKET, current.amount), current.tag?.copy()), false)
         if (filled <= 0 || drain(wrapper, filled, false) == null) {
+            return false
+        }
+        if (requireFullFill && drain(wrapper, filled, false)?.amount != firstTankCapacity(handler)) {
             return false
         }
         if (moveResult) {
             val preview = FluidUtil.getFluidHandler(handler.container.copy()) ?: return false
             val drained = drain(wrapper, filled, false) ?: return false
             preview.fill(drained, true)
-            if (!inventory.insertItem(OUTPUT_RESULT_SLOT, preview.container, true).isEmpty) {
+            val movesToResult = matchingTankIsFull(preview)
+            if (requireFullFill && !movesToResult) {
+                return false
+            }
+            if (movesToResult && !inventory.insertItem(OUTPUT_RESULT_SLOT, preview.container, true).isEmpty) {
                 return false
             }
         }
+        if (requireFullFill) {
+            return true
+        }
         val drained = drain(wrapper, filled, true) ?: return false
         handler.fill(drained, true)
+        val resultHandler = FluidUtil.getFluidHandler(handler.container.copy())
+        if (moveResult && resultHandler?.let(::matchingTankIsFull) == true) {
+            updateContainerStack(ItemStack.EMPTY)
+            inventory.insertItem(OUTPUT_RESULT_SLOT, handler.container, false)
+        } else {
+            updateContainerStack(handler.container)
+        }
         return true
+    }
+
+    private fun hasNoMatchingFluid(handler: IFluidHandlerItem): Boolean =
+        handler.tankProperties.all { it.contents?.amount ?: 0 <= 0 }
+
+    private fun firstTankCapacity(handler: IFluidHandlerItem): Int =
+        handler.tankProperties.firstOrNull()?.capacity ?: 0
+
+    private fun matchingTankIsFull(handler: IFluidHandlerItem): Boolean {
+        val current = fluid
+        if (current == null) {
+            return handler.tankProperties.all { property ->
+                val contents = property.contents
+                contents != null && contents.amount >= property.capacity
+            }
+        }
+        return handler.tankProperties.all { property ->
+            val contents = property.contents
+            contents == null || !contents.isFluidEqual(current) || contents.amount >= property.capacity
+        }
     }
 
     override fun serializeNBT(): NBTTagCompound {

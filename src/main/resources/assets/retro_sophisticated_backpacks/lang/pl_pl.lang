@@ -29,7 +29,17 @@ retro_sophisticated_backpacks.key.category=Retro Sophisticated Backpack
 # Podpowiedzi
 retro_sophisticated_backpacks.tooltip.backpack.inventory_size=Rozmiar ekwipunku: %d
 retro_sophisticated_backpacks.tooltip.backpack.upgrade_slots_size=Sloty ulepszeń: %d
-retro_sophisticated_backpacks.tooltip.backpack.stack_multiplier=-> Mnożnik stosu: %d %s
+retro_sophisticated_backpacks.tooltip.backpack.stack_multiplier=Stack Size Multiplier: %s
+retro_sophisticated_backpacks.tooltip.backpack.fluid=%s mB %s
+retro_sophisticated_backpacks.tooltip.backpack.fluid_empty=Empty tank
+retro_sophisticated_backpacks.tooltip.backpack.energy=%s FE
+retro_sophisticated_backpacks.tooltip.backpack.fluid_title=Fluids
+retro_sophisticated_backpacks.tooltip.backpack.energy_title=Energy
+retro_sophisticated_backpacks.tooltip.backpack.upgrades_title=Upgrades
+retro_sophisticated_backpacks.tooltip.backpack.inventory_title=Inventory
+retro_sophisticated_backpacks.tooltip.backpack.empty=No Upgrades or Inventory Contents
+retro_sophisticated_backpacks.tooltip.backpack.press_for_contents=Press <%s> to View Contents
+retro_sophisticated_backpacks.tooltip.backpack.shift=Left Shift
 
 retro_sophisticated_backpacks.tooltip.upgrade_base=Nic nie robi! Możesz umieścić ją w miejscu na ulepszenia!
 

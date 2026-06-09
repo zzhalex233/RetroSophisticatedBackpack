@@ -36,13 +36,17 @@ retro_sophisticated_backpacks.key.category=复古精妙背包
 # Tooltips
 retro_sophisticated_backpacks.tooltip.backpack.inventory_size=背包容量：%d
 retro_sophisticated_backpacks.tooltip.backpack.upgrade_slots_size=升级插槽：%d
-retro_sophisticated_backpacks.tooltip.backpack.items=物品：%d/%d 槽，合计 %d 个
-retro_sophisticated_backpacks.tooltip.backpack.upgrades=升级：%d/%d
-retro_sophisticated_backpacks.tooltip.backpack.stack_multiplier=-> 堆叠倍数：%d %s
-retro_sophisticated_backpacks.tooltip.backpack.fluid=流体：%d/%d mB %s
-retro_sophisticated_backpacks.tooltip.backpack.fluid_empty=流体：%d/%d mB
-retro_sophisticated_backpacks.tooltip.backpack.energy=能量：%d/%d FE
-retro_sophisticated_backpacks.tooltip.backpack.empty=空
+retro_sophisticated_backpacks.tooltip.backpack.stack_multiplier=堆叠倍数：%s
+retro_sophisticated_backpacks.tooltip.backpack.fluid=%s mB %s
+retro_sophisticated_backpacks.tooltip.backpack.fluid_empty=空罐
+retro_sophisticated_backpacks.tooltip.backpack.energy=%s FE
+retro_sophisticated_backpacks.tooltip.backpack.fluid_title=流体
+retro_sophisticated_backpacks.tooltip.backpack.energy_title=能量
+retro_sophisticated_backpacks.tooltip.backpack.upgrades_title=升级
+retro_sophisticated_backpacks.tooltip.backpack.inventory_title=物品
+retro_sophisticated_backpacks.tooltip.backpack.empty=未加装升级或物品存储
+retro_sophisticated_backpacks.tooltip.backpack.press_for_contents=按<%s>查看内容
+retro_sophisticated_backpacks.tooltip.backpack.shift=左Shift
 
 retro_sophisticated_backpacks.tooltip.upgrade_base=没有任何效果！大可放进升级插槽里！
 

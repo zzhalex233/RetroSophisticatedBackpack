@@ -4,7 +4,6 @@ import baubles.api.BaubleType
 import baubles.api.IBauble
 import baubles.api.render.IRenderBauble
 import com.cleanroommc.modularui.api.IGuiHolder
-import com.cleanroommc.modularui.api.widget.Interactable
 import com.cleanroommc.modularui.screen.ModularPanel
 import com.cleanroommc.modularui.screen.UISettings
 import com.cleanroommc.modularui.value.sync.PanelSyncManager
@@ -12,10 +11,9 @@ import com.cleanroommc.retrosophisticatedbackpacks.RetroSophisticatedBackpacks
 import com.cleanroommc.retrosophisticatedbackpacks.backpack.BackpackInventoryHelper
 import com.cleanroommc.retrosophisticatedbackpacks.backpack.BackpackTier
 import com.cleanroommc.retrosophisticatedbackpacks.block.BackpackBlock
-import com.cleanroommc.retrosophisticatedbackpacks.capability.BackpackEnergyStorage
-import com.cleanroommc.retrosophisticatedbackpacks.capability.BackpackFluidHandler
 import com.cleanroommc.retrosophisticatedbackpacks.capability.BackpackWrapper
 import com.cleanroommc.retrosophisticatedbackpacks.capability.Capabilities
+import com.cleanroommc.retrosophisticatedbackpacks.handler.BackpackTooltipHandler
 import com.cleanroommc.retrosophisticatedbackpacks.client.BackpackBipedModel
 import com.cleanroommc.retrosophisticatedbackpacks.common.gui.BackpackContainer
 import com.cleanroommc.retrosophisticatedbackpacks.common.gui.BackpackGuiHolder
@@ -43,8 +41,6 @@ import net.minecraft.item.ItemStack
 import net.minecraft.nbt.NBTTagCompound
 import net.minecraft.util.*
 import net.minecraft.util.math.BlockPos
-import net.minecraft.util.text.Style
-import net.minecraft.util.text.TextComponentString
 import net.minecraft.util.text.TextComponentTranslation
 import net.minecraft.util.text.TextFormatting
 import net.minecraft.world.World
@@ -278,101 +274,22 @@ class BackpackItem(
         flagIn: ITooltipFlag
     ) {
         val wrapper = stack.getCapability(Capabilities.BACKPACK_CAPABILITY, null)
-        if (!Interactable.hasShiftDown()) {
-            tooltip.add(TextComponentTranslation("tooltip.shift_to_reveal".asTranslationKey()).formattedText)
-            return
+        if (flagIn.isAdvanced && wrapper != null) {
+            tooltip.add(TextFormatting.DARK_GRAY.toString() + "UUID: ${wrapper.uuid}")
         }
-
-        if (wrapper == null) {
-            tooltip.add(TextComponentTranslation("tooltip.backpack.inventory_size".asTranslationKey(), numberOfSlots()).formattedText)
+        if (!BackpackTooltipHandler.shouldShowContentsTooltip()) {
             tooltip.add(
                 TextComponentTranslation(
-                    "tooltip.backpack.upgrade_slots_size".asTranslationKey(),
-                    numberOfUpgradeSlots()
-                ).formattedText
+                    "tooltip.backpack.press_for_contents".asTranslationKey(),
+                    TextComponentTranslation("tooltip.backpack.shift".asTranslationKey())
+                        .setStyle(net.minecraft.util.text.Style().setColor(TextFormatting.AQUA))
+                        .formattedText
+                ).setStyle(net.minecraft.util.text.Style().setColor(TextFormatting.GRAY)).formattedText
             )
             return
         }
 
-        val itemStacks = wrapper.backpackItemStackHandler.inventory.filter { !it.isEmpty }
-        val upgradeStacks = wrapper.upgradeItemStackHandler.inventory.filter { !it.isEmpty }
-        val itemCount = itemStacks.fold(0) { total, itemStack -> total + itemStack.count }
-
-        tooltip.add(
-            TextComponentTranslation(
-                "tooltip.backpack.items".asTranslationKey(),
-                itemStacks.size,
-                wrapper.backpackInventorySize(),
-                itemCount
-            ).formattedText
-        )
-        tooltip.add(
-            TextComponentTranslation(
-                "tooltip.backpack.upgrades".asTranslationKey(),
-                upgradeStacks.size,
-                wrapper.upgradeSlotsSize()
-            ).formattedText
-        )
-        addStackMultiplierTooltip(wrapper, tooltip)
-        addFluidTooltip(wrapper, tooltip)
-        addEnergyTooltip(wrapper, tooltip)
-        if (itemStacks.isEmpty() && upgradeStacks.isEmpty()) {
-            tooltip.add(TextComponentTranslation("tooltip.backpack.empty".asTranslationKey()).formattedText)
-        }
-    }
-
-    private fun addStackMultiplierTooltip(wrapper: BackpackWrapper, tooltip: MutableList<String>) {
-        val multiplier = wrapper.getTotalStackMultiplier()
-        if (multiplier <= 1) {
-            return
-        }
-        val stackHint =
-            if (wrapper.isStackedByMultiplication()) "(xM)"
-            else "(+M)"
-
-        tooltip.add(
-            TextComponentTranslation(
-                "tooltip.backpack.stack_multiplier".asTranslationKey(),
-                multiplier,
-                TextComponentString(stackHint).setStyle(Style().setColor(TextFormatting.RED)).formattedText
-            ).formattedText
-        )
-    }
-
-    private fun addFluidTooltip(wrapper: BackpackWrapper, tooltip: MutableList<String>) {
-        if (!wrapper.hasTankUpgrade()) {
-            return
-        }
-        val tanks = BackpackFluidHandler(wrapper).tankProperties
-        for (tank in tanks) {
-            val contents = tank.contents
-            tooltip.add(
-                if (contents == null || contents.amount <= 0) {
-                    TextComponentTranslation("tooltip.backpack.fluid_empty".asTranslationKey(), 0, tank.capacity).formattedText
-                } else {
-                    TextComponentTranslation(
-                        "tooltip.backpack.fluid".asTranslationKey(),
-                        contents.amount,
-                        tank.capacity,
-                        contents.localizedName
-                    ).formattedText
-                }
-            )
-        }
-    }
-
-    private fun addEnergyTooltip(wrapper: BackpackWrapper, tooltip: MutableList<String>) {
-        if (!wrapper.hasBatteryUpgrade()) {
-            return
-        }
-        val energy = BackpackEnergyStorage(wrapper)
-        tooltip.add(
-            TextComponentTranslation(
-                "tooltip.backpack.energy".asTranslationKey(),
-                energy.energyStored,
-                energy.maxEnergyStored
-            ).formattedText
-        )
+        wrapper?.let { BackpackTooltipHandler.addTooltipLines(it, tooltip) }
     }
 
     override fun buildUI(

@@ -8,12 +8,14 @@ import com.cleanroommc.retrosophisticatedbackpacks.common.gui.slot.ModularBackpa
 import com.cleanroommc.retrosophisticatedbackpacks.mixin.GuiContainerAccessor
 import com.cleanroommc.retrosophisticatedbackpacks.network.C2SStashToBackpackPacket
 import net.minecraft.client.Minecraft
+import net.minecraft.client.renderer.GlStateManager
+import net.minecraft.client.renderer.RenderHelper
 import net.minecraft.client.gui.inventory.GuiContainer
 import net.minecraft.client.gui.inventory.GuiContainerCreative
 import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.inventory.Slot
 import net.minecraft.item.ItemStack
-import net.minecraftforge.client.event.GuiScreenEvent
+import net.minecraftforge.client.event.GuiContainerEvent
 import net.minecraftforge.fml.common.Mod
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent
 import net.minecraftforge.fml.relauncher.Side
@@ -27,8 +29,8 @@ object ClientGuiStashHandler {
 
     @SubscribeEvent
     @JvmStatic
-    fun onDrawScreenPost(event: GuiScreenEvent.DrawScreenEvent.Post) {
-        val screen = event.gui as? GuiContainer ?: return
+    fun onDrawForeground(event: GuiContainerEvent.DrawForeground) {
+        val screen = event.guiContainer
         if (screen is GuiContainerCreative) {
             return
         }
@@ -39,12 +41,11 @@ object ClientGuiStashHandler {
             return
         }
 
-        val accessor = screen as GuiContainerAccessor
-        for (slot in player.openContainer.inventorySlots) {
+        for (slot in screen.inventorySlots.inventorySlots) {
             if (slot is ModularBackpackSlot || !slot.isEnabled || slot.xPos < -100 || slot.yPos < -100) {
                 continue
             }
-            drawStashSign(screen, accessor, player, slot, carried)
+            drawStashSign(player, slot, carried)
         }
     }
 
@@ -93,8 +94,6 @@ object ClientGuiStashHandler {
     }
 
     private fun drawStashSign(
-        screen: GuiContainer,
-        accessor: GuiContainerAccessor,
         player: EntityPlayer,
         slot: Slot,
         carried: ItemStack
@@ -107,10 +106,10 @@ object ClientGuiStashHandler {
         }
 
         if (plusResult != Result.NO_SPACE) {
-            Minecraft.getMinecraft().fontRenderer.drawStringWithShadow(
+            drawStashText(
                 "+",
-                (accessor.guiLeft + slot.xPos + 10).toFloat(),
-                (accessor.guiTop + slot.yPos + 8).toFloat(),
+                (slot.xPos + 10).toFloat(),
+                (slot.yPos + 8).toFloat(),
                 color(plusResult)
             )
             return
@@ -127,12 +126,20 @@ object ClientGuiStashHandler {
             return
         }
 
-        Minecraft.getMinecraft().fontRenderer.drawStringWithShadow(
+        drawStashText(
             "-",
-            (accessor.guiLeft + slot.xPos + 1).toFloat(),
-            (accessor.guiTop + slot.yPos).toFloat(),
+            (slot.xPos + 1).toFloat(),
+            slot.yPos.toFloat(),
             color(minusResult)
         )
+    }
+
+    private fun drawStashText(text: String, x: Float, y: Float, color: Int) {
+        GlStateManager.disableLighting()
+        GlStateManager.disableDepth()
+        Minecraft.getMinecraft().fontRenderer.drawStringWithShadow(text, x, y, color)
+        GlStateManager.enableDepth()
+        RenderHelper.enableGUIStandardItemLighting()
     }
 
     private fun getStashAction(

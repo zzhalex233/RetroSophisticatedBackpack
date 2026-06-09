@@ -22,6 +22,9 @@ class BatteryInventoryControlWidget(
         private const val BATTERY_WIDTH = 18
         private const val OVERLAY_LEFT = BATTERY_LEFT + 1
         private const val OVERLAY_WIDTH = 16
+        private const val CHARGE_SEGMENT_HEIGHT = 6
+        private const val TOP_BAR_COLOR = 0xFF1A1A
+        private const val BOTTOM_BAR_COLOR = 0xFFFF40
     }
 
     init {
@@ -51,12 +54,14 @@ class BatteryInventoryControlWidget(
             if (height < 36) height / 2 else 18,
             theme
         )
-        renderCharge(context, currentWrapper(), height, theme)
         yOffset = 0
         repeat(height / 18) {
             RSBTextures.BATTERY_OVERLAY.draw(context, OVERLAY_LEFT, yOffset, OVERLAY_WIDTH, 18, theme)
             yOffset += 18
         }
+        renderCharge(context, currentWrapper(), height, theme)
+        RSBTextures.BATTERY_CONNECTION_TOP.draw(context, OVERLAY_LEFT, 0, OVERLAY_WIDTH, 4, theme)
+        RSBTextures.BATTERY_CONNECTION_BOTTOM.draw(context, OVERLAY_LEFT, height - 4, OVERLAY_WIDTH, 4, theme)
     }
 
     private fun currentWrapper(): BatteryUpgradeWrapper? =
@@ -73,19 +78,32 @@ class BatteryInventoryControlWidget(
         if (wrapper == null || max <= 0 || wrapper.energyStored <= 0) {
             return
         }
-        val displayLevel = ((height - 2) * (wrapper.energyStored.toFloat() / max)).toInt().coerceIn(1, height - 2)
-        var drawn = 0
-        while (drawn < displayLevel) {
-            val segment = minOf(6, displayLevel - drawn)
-            RSBTextures.BATTERY_CHARGE.draw(
+        val numberOfSegments = height / CHARGE_SEGMENT_HEIGHT
+        val displayLevel = (numberOfSegments * (wrapper.energyStored.toFloat() / max)).toInt()
+        if (displayLevel <= 0) {
+            return
+        }
+
+        val topRed = TOP_BAR_COLOR shr 16 and 255
+        val topGreen = TOP_BAR_COLOR shr 8 and 255
+        val topBlue = TOP_BAR_COLOR and 255
+        val bottomRed = BOTTOM_BAR_COLOR shr 16 and 255
+        val bottomGreen = BOTTOM_BAR_COLOR shr 8 and 255
+        val bottomBlue = BOTTOM_BAR_COLOR and 255
+
+        for (segmentIndex in 0 until displayLevel) {
+            val percentage = if (numberOfSegments <= 1) 0f else segmentIndex.toFloat() / (numberOfSegments - 1)
+            val red = (bottomRed * (1 - percentage) + topRed * percentage).toInt()
+            val green = (bottomGreen * (1 - percentage) + topGreen * percentage).toInt()
+            val blue = (bottomBlue * (1 - percentage) + topBlue * percentage).toInt()
+            RSBTextures.BATTERY_CHARGE.withColorOverride((255 shl 24) or (red shl 16) or (green shl 8) or blue).draw(
                 context,
                 OVERLAY_LEFT,
-                height - 1 - drawn - segment,
+                height - (segmentIndex + 1) * CHARGE_SEGMENT_HEIGHT,
                 OVERLAY_WIDTH,
-                segment,
+                CHARGE_SEGMENT_HEIGHT,
                 theme
             )
-            drawn += segment
         }
     }
 }
