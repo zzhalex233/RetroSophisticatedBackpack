@@ -110,7 +110,7 @@ class BackpackBlock(
         }
 
     override fun createBlockState(): BlockStateContainer =
-        BlockStateContainer(this, *arrayOf(LEFT_TANK, RIGHT_TANK, BATTERY, FACING))
+        BlockStateContainer(this, LEFT_TANK, RIGHT_TANK, BATTERY, FACING)
 
     override fun getStateForPlacement(
         world: World,
@@ -157,9 +157,8 @@ class BackpackBlock(
         return meta
     }
 
-    override fun getPushReaction(state: IBlockState): EnumPushReaction {
-        return EnumPushReaction.DESTROY
-    }
+    override fun getPushReaction(state: IBlockState): EnumPushReaction =
+        EnumPushReaction.DESTROY
 
     override fun hasComparatorInputOverride(state: IBlockState): Boolean =
         true
@@ -182,7 +181,7 @@ class BackpackBlock(
 
         tileEntity.wrapper.deserializeNBT(backpackInventory.serializeNBT())
         if (stack.hasDisplayName())
-            tileEntity.wrapper.customName = stack.displayName
+            tileEntity.setCustomName(stack.displayName)
 
         val (leftTank, rightTank) = tileEntity.wrapper.tankRenderSides()
         worldIn.setBlockState(

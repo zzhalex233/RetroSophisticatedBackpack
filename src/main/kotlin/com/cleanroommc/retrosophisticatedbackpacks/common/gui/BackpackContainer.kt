@@ -13,6 +13,7 @@ import com.cleanroommc.retrosophisticatedbackpacks.common.gui.slot.IndexedInvent
 import com.cleanroommc.retrosophisticatedbackpacks.common.gui.slot.IndexedModularCraftingSlot
 import com.cleanroommc.retrosophisticatedbackpacks.common.gui.slot.ModularBackpackSlot
 import com.cleanroommc.retrosophisticatedbackpacks.common.gui.slot.ModularBackpackSlotWrapper
+import net.minecraft.entity.EntityLivingBase
 import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.entity.player.EntityPlayerMP
 import net.minecraft.inventory.ClickType
@@ -31,6 +32,7 @@ class BackpackContainer(
     private val backpackSlotIndex: Int?,
     private val backpackInventoryType: PlayerInventoryGuiData.InventoryType? = null,
     private val backpackSourceSlotIndex: Int? = backpackSlotIndex,
+    private val backpackTargetEntity: EntityLivingBase? = null,
     private val tilePos: BlockPos? = null
 ) :
     ModularContainer() {
@@ -50,7 +52,12 @@ class BackpackContainer(
             when {
                 tilePos != null -> TileEntityGuiFactory.INSTANCE.open(player, tilePos)
                 backpackInventoryType != null && backpackSourceSlotIndex != null ->
-                    PlayerInventoryGuiFactory.open(player, backpackInventoryType, backpackSourceSlotIndex)
+                    PlayerInventoryGuiFactory.open(
+                        backpackTargetEntity ?: player,
+                        player,
+                        backpackInventoryType,
+                        backpackSourceSlotIndex
+                    )
             }
         } finally {
             player.inventory.itemStack = carriedStack

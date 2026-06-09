@@ -3,6 +3,7 @@ package com.cleanroommc.retrosophisticatedbackpacks.common.gui
 import com.cleanroommc.modularui.api.IGuiHolder
 import com.cleanroommc.modularui.factory.AbstractUIFactory
 import com.cleanroommc.modularui.factory.GuiManager
+import net.minecraft.entity.EntityLivingBase
 import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.entity.player.EntityPlayerMP
 import net.minecraft.network.PacketBuffer
@@ -15,15 +16,20 @@ object PlayerInventoryGuiFactory : AbstractUIFactory<PlayerInventoryGuiData>("rs
             EnumHand.OFF_HAND -> 40
         }
 
-        open(player, PlayerInventoryGuiData.InventoryType.PLAYER_INVENTORY, slotId)
+        open(player, player, PlayerInventoryGuiData.InventoryType.PLAYER_INVENTORY, slotId)
     }
 
-    fun open(player: EntityPlayer, inventoryType: PlayerInventoryGuiData.InventoryType, slotIndex: Int) {
-        if (player !is EntityPlayerMP)
+    fun open(
+        targetEntity: EntityLivingBase,
+        fromPlayer: EntityPlayer,
+        inventoryType: PlayerInventoryGuiData.InventoryType,
+        slotIndex: Int
+    ) {
+        if (fromPlayer !is EntityPlayerMP)
             throw IllegalStateException("Synced GUIs must be opened from server side")
 
-        val guiData = PlayerInventoryGuiData(player, inventoryType, slotIndex)
-        GuiManager.open(this, guiData, player)
+        val guiData = PlayerInventoryGuiData(targetEntity, fromPlayer, inventoryType, slotIndex)
+        GuiManager.open(this, guiData, fromPlayer)
     }
 
     override fun getGuiHolder(data: PlayerInventoryGuiData): IGuiHolder<PlayerInventoryGuiData> =
@@ -33,6 +39,7 @@ object PlayerInventoryGuiFactory : AbstractUIFactory<PlayerInventoryGuiData>("rs
         guiData: PlayerInventoryGuiData,
         buffer: PacketBuffer
     ) {
+        buffer.writeInt(guiData.targetEntity.entityId)
         buffer.writeInt(guiData.inventoryType.ordinal)
         buffer.writeInt(guiData.slotIndex)
     }
@@ -41,9 +48,12 @@ object PlayerInventoryGuiFactory : AbstractUIFactory<PlayerInventoryGuiData>("rs
         player: EntityPlayer,
         buffer: PacketBuffer
     ): PlayerInventoryGuiData {
+        val targetEntityId = buffer.readInt()
+        val targetEntity = player.world.getEntityByID(targetEntityId) as? EntityLivingBase
+            ?: throw IllegalStateException("Unable to find the target entity to open the backpack from")
         val inventoryType = PlayerInventoryGuiData.InventoryType.entries[buffer.readInt()]
         val slotIndex = buffer.readInt()
 
-        return PlayerInventoryGuiData(player, inventoryType, slotIndex)
+        return PlayerInventoryGuiData(targetEntity, player, inventoryType, slotIndex)
     }
 }

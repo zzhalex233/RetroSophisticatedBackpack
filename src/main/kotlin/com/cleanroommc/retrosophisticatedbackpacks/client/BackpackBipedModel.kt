@@ -13,7 +13,7 @@ import net.minecraftforge.fml.relauncher.SideOnly
 class BackpackBipedModel(private val backpackItemStack: ItemStack) : ModelBiped() {
     companion object {
         fun renderBackpack(backpackItemStack: ItemStack, entityIn: Entity) {
-            GlStateManager.translate(0.0, 0.3, 0.225)
+            GlStateManager.translate(0.0, 0.3, 0.15)
             GlStateManager.rotate(180f, 1f, 0f, 0f)
 
             if (entityIn.isSneaking) {

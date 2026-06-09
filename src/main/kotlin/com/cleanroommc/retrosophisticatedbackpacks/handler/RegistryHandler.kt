@@ -42,7 +42,7 @@ object RegistryHandler {
 
         GameRegistry.registerTileEntity(BackpackTileEntity::class.java, ResourceLocation(Tags.MOD_ID, "backpack"))
     }
-    
+
     @SubscribeEvent
     @JvmStatic
     fun onRecipeRegister(event: RegistryEvent.Register<IRecipe>) {
@@ -51,7 +51,8 @@ object RegistryHandler {
             iter.add(null)
 
             for ((mainColor, accentColor) in iter.flatMap { a -> iter.map { a to it } }) {
-                DyeingRecipeRegistry.constructRecipe(backpackItem, mainColor, accentColor)?.let(event.registry::register)
+                DyeingRecipeRegistry.constructRecipe(backpackItem, mainColor, accentColor)
+                    ?.let(event.registry::register)
             }
         }
     }

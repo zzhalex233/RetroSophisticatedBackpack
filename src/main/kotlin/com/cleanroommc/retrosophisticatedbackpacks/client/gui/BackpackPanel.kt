@@ -61,7 +61,8 @@ class BackpackPanel(
     internal val tileEntity: BackpackTileEntity?,
     internal val syncManager: PanelSyncManager,
     internal val backpackWrapper: BackpackWrapper,
-    private val openedBackpackSlotIndex: Int? = null
+    private val openedBackpackSlotIndex: Int? = null,
+    private val backpackName: String? = null
 ) : ModularPanel("backpack_gui") {
     companion object {
         private const val SLOT_SIZE = 18
@@ -102,8 +103,9 @@ class BackpackPanel(
             width: Int,
             height: Int,
             backpackSlotIndex: Int? = null,
+            backpackName: String? = null,
         ): BackpackPanel {
-            val panel = BackpackPanel(player, tileEntity, syncManager, wrapper, backpackSlotIndex)
+            val panel = BackpackPanel(player, tileEntity, syncManager, wrapper, backpackSlotIndex, backpackName)
 
             panel.background(IDrawable.EMPTY)
             syncManager.bindPlayerInventory(player)
@@ -973,8 +975,7 @@ class BackpackPanel(
     }
 
     internal fun addTexts(player: EntityPlayer) {
-        // TODO: Delegates to itemstack or tileentity's display name
-        val titleWidget = TextWidget(StringKey(backpackWrapper.getDisplayName().formattedText))
+        val titleWidget = TextWidget(StringKey(backpackName ?: backpackWrapper.getDisplayName().formattedText))
             .pos(8, 6)
             .setEnabledIf { !isSettingMode }
         val settingsTitleWidget = IKey.lang("gui.settings".asTranslationKey()).asWidget()

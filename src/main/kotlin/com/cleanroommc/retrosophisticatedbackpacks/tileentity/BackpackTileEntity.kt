@@ -113,6 +113,7 @@ class BackpackTileEntity(val wrapper: BackpackWrapper = BackpackWrapper()) :
         val backpackInv = getCapability(Capabilities.BACKPACK_CAPABILITY, null)!!
         val containerSupplier = { BackpackContainer(backpackInv, null, tilePos = data.blockPos) }
         uiSettings.customContainer(containerSupplier)
+        uiSettings.canInteractWith(::isUsableByPlayer)
         val holder: BackpackGuiHolder.TileEntityGuiHolder = BackpackGuiHolder.TileEntityGuiHolder(backpackInv)
         return holder.buildUI(data, syncManager, uiSettings)
     }
@@ -130,10 +131,10 @@ class BackpackTileEntity(val wrapper: BackpackWrapper = BackpackWrapper()) :
         wrapper.customName != null
 
     override fun getName(): String =
-        if (hasCustomName()) wrapper.customName!! else "container.backpack"
+        if (hasCustomName()) wrapper.customName!! else "container.backpack".asTranslationKey()
 
     override fun getDisplayName(): ITextComponent =
-        if (hasCustomName()) TextComponentString(name)
+        if (hasCustomName()) TextComponentString(wrapper.customName!!)
         else TextComponentTranslation("container.backpack".asTranslationKey())
 
     override fun update() {

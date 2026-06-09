@@ -1,15 +1,10 @@
 package com.cleanroommc.retrosophisticatedbackpacks.crafting
 
 import com.cleanroommc.retrosophisticatedbackpacks.capability.Capabilities
-import com.google.gson.JsonObject
 import net.minecraft.inventory.InventoryCrafting
 import net.minecraft.item.ItemStack
-import net.minecraft.item.crafting.IRecipe
-import net.minecraft.util.JsonUtils
 import net.minecraft.util.ResourceLocation
 import net.minecraftforge.common.crafting.CraftingHelper
-import net.minecraftforge.common.crafting.IRecipeFactory
-import net.minecraftforge.common.crafting.JsonContext
 import net.minecraftforge.oredict.ShapedOreRecipe
 
 @Suppress("UNUSED")
@@ -30,9 +25,9 @@ class ShapedBackpackUpgradeRecipe(
 
             for (i in 0 until backpackWrapper.backpackInventorySize()) {
                 newBackpackWrapper.backpackItemStackHandler.inventory[i] =
-                    backpackWrapper.backpackItemStackHandler.inventory[i]
+                    backpackWrapper.backpackItemStackHandler.inventory[i].copy()
                 newBackpackWrapper.backpackItemStackHandler.memorizedSlotStack[i] =
-                    backpackWrapper.backpackItemStackHandler.memorizedSlotStack[i]
+                    backpackWrapper.backpackItemStackHandler.memorizedSlotStack[i].copy()
                 newBackpackWrapper.backpackItemStackHandler.sortLockedSlots[i] =
                     backpackWrapper.backpackItemStackHandler.sortLockedSlots[i]
             }
@@ -43,7 +38,7 @@ class ShapedBackpackUpgradeRecipe(
 
             for (i in 0 until backpackWrapper.upgradeSlotsSize()) {
                 newBackpackWrapper.upgradeItemStackHandler.inventory[i] =
-                    backpackWrapper.upgradeItemStackHandler.inventory[i]
+                    backpackWrapper.upgradeItemStackHandler.inventory[i].copy()
             }
         }
 

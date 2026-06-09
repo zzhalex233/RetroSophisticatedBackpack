@@ -39,7 +39,6 @@ import net.minecraft.entity.player.EntityPlayerMP
 import net.minecraft.init.SoundEvents
 import net.minecraft.inventory.EntityEquipmentSlot
 import net.minecraft.item.ItemBlock
-import net.minecraft.item.ItemFood
 import net.minecraft.item.ItemStack
 import net.minecraft.nbt.NBTTagCompound
 import net.minecraft.util.*
@@ -187,7 +186,6 @@ class BackpackItem(
         oldStack.item !== newStack.item || oldStack.metadata != newStack.metadata
 
     override fun onUpdate(stack: ItemStack, worldIn: World, entityIn: Entity, itemSlot: Int, isSelected: Boolean) {
-        // Only cache on server
         if (!worldIn.isRemote && entityIn is EntityPlayerMP) {
             val wrapper = stack.getCapability(Capabilities.BACKPACK_CAPABILITY, null) ?: return
 
@@ -233,7 +231,7 @@ class BackpackItem(
         entityLiving: EntityLivingBase,
         itemStack: ItemStack,
         armorSlot: EntityEquipmentSlot,
-        _default: ModelBiped
+        default: ModelBiped
     ): ModelBiped? {
         if (armorSlot == EntityEquipmentSlot.CHEST) {
             val model = if (cachedBipedModel != null) cachedBipedModel
@@ -242,7 +240,7 @@ class BackpackItem(
                 cachedBipedModel
             }
 
-            model?.setModelAttributes(_default)
+            model?.setModelAttributes(default)
             return model
         }
 
@@ -250,7 +248,7 @@ class BackpackItem(
     }
 
     override fun getNBTShareTag(stack: ItemStack): NBTTagCompound? {
-        var nbt = super.getNBTShareTag(stack)
+        var nbt = super.getNBTShareTag(stack)?.copy()
         val wrapper = stack.getCapability(Capabilities.BACKPACK_CAPABILITY, null) ?: return nbt
 
         if (nbt != null) nbt.setTag("BackpackCapability", wrapper.serializeNBT())
@@ -385,7 +383,11 @@ class BackpackItem(
         val stack = data.usedItemStack
         val wrapper = stack.getCapability(Capabilities.BACKPACK_CAPABILITY, null)!!
         val slotIndex = if (data.inventoryType == InventoryType.PLAYER_INVENTORY) data.slotIndex else null
-        uiSettings.customContainer { BackpackContainer(wrapper, slotIndex, data.inventoryType, data.slotIndex) }
+        uiSettings.customContainer { BackpackContainer(wrapper, slotIndex, data.inventoryType, data.slotIndex, data.targetEntity) }
+        uiSettings.canInteractWith {
+            if (data.targetEntity.isDead) false
+            else it.getDistance(data.targetEntity) <= 4.0
+        }
         val holder = BackpackGuiHolder.ItemStackGuiHolder(wrapper)
         return holder.buildUI(data, syncManager, uiSettings)
     }
