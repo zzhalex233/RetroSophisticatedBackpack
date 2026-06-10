@@ -188,8 +188,7 @@ class BackpackItem(
             if (entityIn.ticksExisted % 20 == 0)
                 wrapper.feed(entityIn, wrapper)
 
-            if (entityIn.ticksExisted % 5 == 0)
-                wrapper.tickUpgrades(entityIn, worldIn, entityIn.posX, entityIn.posY, entityIn.posZ)
+            wrapper.tickUpgrades(entityIn, worldIn, entityIn.posX, entityIn.posY, entityIn.posZ)
 
             if (!Config.tickDedupeLogicDisabled && !wrapper.isCached)
                 CapabilityHandler.cacheBackpackInventory(wrapper)

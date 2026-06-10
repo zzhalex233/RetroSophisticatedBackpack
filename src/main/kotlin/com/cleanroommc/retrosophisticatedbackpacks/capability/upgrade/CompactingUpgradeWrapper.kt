@@ -47,8 +47,10 @@ open class CompactingUpgradeWrapper :
 
     override fun deserializeNBT(nbt: NBTTagCompound) {
         super.deserializeNBT(nbt)
-        compactNonUncraftable = nbt.getBoolean(COMPACT_NON_UNCRAFTABLE_TAG)
-        shouldWorkInGui = nbt.getBoolean(SHOULD_WORK_IN_GUI_TAG)
+        if (nbt.hasKey(COMPACT_NON_UNCRAFTABLE_TAG))
+            compactNonUncraftable = nbt.getBoolean(COMPACT_NON_UNCRAFTABLE_TAG)
+        if (nbt.hasKey(SHOULD_WORK_IN_GUI_TAG))
+            shouldWorkInGui = nbt.getBoolean(SHOULD_WORK_IN_GUI_TAG)
     }
 
     override fun hasCapability(capability: Capability<*>, facing: EnumFacing?): Boolean =
@@ -92,8 +94,10 @@ class AdvancedCompactingUpgradeWrapper :
 
     override fun deserializeNBT(nbt: NBTTagCompound) {
         super.deserializeNBT(nbt)
-        compactNonUncraftable = nbt.getBoolean(COMPACT_NON_UNCRAFTABLE_TAG)
-        shouldWorkInGui = nbt.getBoolean(SHOULD_WORK_IN_GUI_TAG)
+        if (nbt.hasKey(COMPACT_NON_UNCRAFTABLE_TAG))
+            compactNonUncraftable = nbt.getBoolean(COMPACT_NON_UNCRAFTABLE_TAG)
+        if (nbt.hasKey(SHOULD_WORK_IN_GUI_TAG))
+            shouldWorkInGui = nbt.getBoolean(SHOULD_WORK_IN_GUI_TAG)
     }
 
     override fun hasCapability(capability: Capability<*>, facing: EnumFacing?): Boolean =

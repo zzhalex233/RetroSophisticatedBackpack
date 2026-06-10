@@ -6,9 +6,6 @@ import com.cleanroommc.retrosophisticatedbackpacks.inventory.ExposedItemStackHan
 import com.cleanroommc.retrosophisticatedbackpacks.item.JukeboxUpgradeItem
 import com.cleanroommc.retrosophisticatedbackpacks.util.Utils.asTranslationKey
 import net.minecraft.entity.Entity
-import net.minecraft.init.Items
-import net.minecraft.item.Item
-import net.minecraft.item.ItemRecord
 import net.minecraft.item.ItemStack
 import net.minecraft.nbt.NBTTagCompound
 import net.minecraft.util.EnumFacing
@@ -28,23 +25,7 @@ open class JukeboxUpgradeWrapper(private val slots: Int = 1) : UpgradeWrapper<Ju
         private const val REPEAT_MODE_TAG = "RepeatMode"
         private const val FINISH_TIME_TAG = "FinishTime"
 
-        private const val RECORD_PLAY_EVENT = 1010
         private const val DEFAULT_DISC_LENGTH = 3600L
-
-        private val VANILLA_DISC_LENGTHS = mapOf(
-            Items.RECORD_13 to 1780L,
-            Items.RECORD_CAT to 3700L,
-            Items.RECORD_BLOCKS to 6900L,
-            Items.RECORD_CHIRP to 3700L,
-            Items.RECORD_FAR to 3480L,
-            Items.RECORD_MALL to 3940L,
-            Items.RECORD_MELLOHI to 1920L,
-            Items.RECORD_STAL to 3000L,
-            Items.RECORD_STRAD to 3760L,
-            Items.RECORD_WARD to 5020L,
-            Items.RECORD_11 to 1420L,
-            Items.RECORD_WAIT to 4760L
-        )
     }
 
     override val settingsLangKey = "gui.jukebox_settings".asTranslationKey()
@@ -60,23 +41,24 @@ open class JukeboxUpgradeWrapper(private val slots: Int = 1) : UpgradeWrapper<Ju
 
     override val discInventory: IItemHandler = object : ExposedItemStackHandler(slots) {
         override fun isItemValid(slot: Int, stack: ItemStack): Boolean =
-            stack.isEmpty || stack.item is ItemRecord
+            stack.isEmpty || DiscHandlerRegistry.isSupported(stack)
 
         override fun onContentsChanged(slot: Int) {
             super.onContentsChanged(slot)
+            if (isPlaying && slot == activeSlot) {
+                requestStop()
+            }
             initPlaylist(excludeActive = true)
         }
     }
 
     override fun play(world: World, pos: BlockPos) {
-        if (world.isRemote) {
+        if (world.isRemote || isPlaying) {
             return
         }
         worldPlaying = world
         posPlaying = pos
-        if (!isPlaying) {
-            playNext()
-        }
+        playNext()
     }
 
     override fun play(entity: Entity) {
@@ -87,18 +69,21 @@ open class JukeboxUpgradeWrapper(private val slots: Int = 1) : UpgradeWrapper<Ju
         if (world.isRemote) {
             return
         }
-        world.playEvent(null, RECORD_PLAY_EVENT, pos, 0)
+        DiscHandlerRegistry.stopDisc(world, pos, getDisc())
         setPlaying(false)
         playlist.clear()
         history.clear()
     }
 
     override fun next() {
+        if (!isPlaying) {
+            return
+        }
         playNext()
     }
 
     override fun previous() {
-        if (history.isEmpty()) {
+        if (!isPlaying || history.isEmpty()) {
             return
         }
         if (activeSlot >= 0) {
@@ -137,13 +122,26 @@ open class JukeboxUpgradeWrapper(private val slots: Int = 1) : UpgradeWrapper<Ju
     fun isPlaying(): Boolean = isPlaying
 
     fun requestPlay() {
-        setPlaying(true)
+        if (isPlaying) {
+            return
+        }
+        val world = worldPlaying
+        val pos = posPlaying
+        if (world != null && pos != null) {
+            play(world, pos)
+        } else {
+            setPlaying(true)
+        }
     }
 
     fun requestStop() {
         worldPlaying?.let { world ->
             posPlaying?.let { pos -> stop(world, pos) }
-        } ?: setPlaying(false)
+        } ?: run {
+            setPlaying(false)
+            playlist.clear()
+            history.clear()
+        }
     }
 
     override fun onBeforeRemoved() {
@@ -177,18 +175,25 @@ open class JukeboxUpgradeWrapper(private val slots: Int = 1) : UpgradeWrapper<Ju
         val world = worldPlaying ?: return
         val pos = posPlaying ?: return
         val disc = getDisc()
-        if (world.isRemote || disc.isEmpty || disc.item !is ItemRecord) {
+        if (world.isRemote || disc.isEmpty || !DiscHandlerRegistry.isSupported(disc)) {
             setPlaying(false)
             return
         }
-        world.playEvent(null, RECORD_PLAY_EVENT, pos, 0)
-        world.playEvent(null, RECORD_PLAY_EVENT, pos, Item.getIdFromItem(disc.item))
-        finishTime = world.totalWorldTime + getDiscLength(disc)
+        DiscHandlerRegistry.stopDisc(world, pos, disc)
+        if (!DiscHandlerRegistry.playDisc(world, pos, disc)) {
+            setPlaying(false)
+            return
+        }
+        finishTime = world.totalWorldTime + getDiscLength(disc, world)
         setPlaying(true)
     }
 
-    private fun getDisc(): ItemStack =
+    fun getDisc(): ItemStack =
         if (activeSlot in 0 until slots) discInventory.getStackInSlot(activeSlot) else ItemStack.EMPTY
+
+    fun getDiscSlotActive(): Int = activeSlot
+
+    fun getDiscFinishTime(): Long = finishTime
 
     private fun setPlaying(playing: Boolean) {
         isPlaying = playing
@@ -201,7 +206,8 @@ open class JukeboxUpgradeWrapper(private val slots: Int = 1) : UpgradeWrapper<Ju
     private fun initPlaylist(excludeActive: Boolean) {
         playlist.clear()
         for (slot in 0 until slots) {
-            if (!discInventory.getStackInSlot(slot).isEmpty && (!excludeActive || !isPlaying || slot != activeSlot)) {
+            val disc = discInventory.getStackInSlot(slot)
+            if (DiscHandlerRegistry.isSupported(disc) && (!excludeActive || !isPlaying || slot != activeSlot)) {
                 playlist.add(slot)
             }
         }
@@ -210,8 +216,8 @@ open class JukeboxUpgradeWrapper(private val slots: Int = 1) : UpgradeWrapper<Ju
         }
     }
 
-    private fun getDiscLength(stack: ItemStack): Long =
-        VANILLA_DISC_LENGTHS[stack.item] ?: DEFAULT_DISC_LENGTH
+    private fun getDiscLength(stack: ItemStack, world: World): Long =
+        DiscHandlerRegistry.getMusicLengthInTicks(stack, world) ?: DEFAULT_DISC_LENGTH
 
     override fun serializeNBT(): NBTTagCompound {
         val nbt = super.serializeNBT()
@@ -226,12 +232,18 @@ open class JukeboxUpgradeWrapper(private val slots: Int = 1) : UpgradeWrapper<Ju
 
     override fun deserializeNBT(nbt: NBTTagCompound) {
         super.deserializeNBT(nbt)
-        (discInventory as ExposedItemStackHandler).deserializeNBT(nbt.getCompoundTag(INVENTORY_TAG))
-        isPlaying = nbt.getBoolean(IS_PLAYING_TAG)
-        activeSlot = nbt.getInteger(ACTIVE_SLOT_TAG)
-        shuffleEnabled = nbt.getBoolean(SHUFFLE_TAG)
-        repeatMode = runCatching { RepeatMode.valueOf(nbt.getString(REPEAT_MODE_TAG)) }.getOrDefault(RepeatMode.NO)
-        finishTime = nbt.getLong(FINISH_TIME_TAG)
+        if (nbt.hasKey(INVENTORY_TAG))
+            (discInventory as ExposedItemStackHandler).deserializeNBT(nbt.getCompoundTag(INVENTORY_TAG))
+        if (nbt.hasKey(IS_PLAYING_TAG))
+            isPlaying = nbt.getBoolean(IS_PLAYING_TAG)
+        if (nbt.hasKey(ACTIVE_SLOT_TAG))
+            activeSlot = nbt.getInteger(ACTIVE_SLOT_TAG)
+        if (nbt.hasKey(SHUFFLE_TAG))
+            shuffleEnabled = nbt.getBoolean(SHUFFLE_TAG)
+        if (nbt.hasKey(REPEAT_MODE_TAG))
+            repeatMode = runCatching { RepeatMode.valueOf(nbt.getString(REPEAT_MODE_TAG)) }.getOrDefault(repeatMode)
+        if (nbt.hasKey(FINISH_TIME_TAG))
+            finishTime = nbt.getLong(FINISH_TIME_TAG)
         initPlaylist(excludeActive = true)
     }
 

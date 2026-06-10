@@ -126,12 +126,11 @@ class BackpackMainSettingsWidget(
             }
             .tooltipAutoUpdate(true)
             .tooltipDynamic {
+                val stateName = if (state()) "on" else "off"
                 it.addLine(
-                    IKey.lang(
-                        "gui.settings_button.$tooltipName.${if (state()) "on" else "off"}".asTranslationKey()
-                    )
+                    IKey.lang("gui.settings_button.$tooltipName.$stateName".asTranslationKey())
                 ).addLine(
-                    IKey.lang("gui.settings_button.$tooltipName.detail".asTranslationKey()).style(IKey.GRAY)
+                    IKey.lang("gui.settings_button.$tooltipName.$stateName.tooltip".asTranslationKey()).style(IKey.GRAY)
                 ).pos(RichTooltip.Pos.NEXT_TO_MOUSE)
             }
 

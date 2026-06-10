@@ -125,8 +125,10 @@ class BatteryUpgradeWrapper : UpgradeWrapper<BatteryUpgradeItem>(), IBatteryUpgr
 
     override fun deserializeNBT(nbt: NBTTagCompound) {
         super.deserializeNBT(nbt)
-        energyStored = nbt.getInteger(ENERGY_TAG)
-        inventory.deserializeNBT(nbt.getCompoundTag(INVENTORY_TAG))
+        if (nbt.hasKey(ENERGY_TAG))
+            energyStored = nbt.getInteger(ENERGY_TAG)
+        if (nbt.hasKey(INVENTORY_TAG))
+            inventory.deserializeNBT(nbt.getCompoundTag(INVENTORY_TAG))
     }
 
     override fun hasCapability(capability: Capability<*>, facing: EnumFacing?): Boolean =

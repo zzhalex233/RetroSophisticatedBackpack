@@ -21,6 +21,7 @@ import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget
 import com.cleanroommc.retrosophisticatedbackpacks.Tags
 import com.cleanroommc.retrosophisticatedbackpacks.capability.upgrade.IAdvancedFilterable
 import com.cleanroommc.retrosophisticatedbackpacks.capability.upgrade.IBasicFilterable
+import com.cleanroommc.retrosophisticatedbackpacks.capability.upgrade.IContentsFilterable
 import com.cleanroommc.retrosophisticatedbackpacks.client.gui.RSBTextures
 import com.cleanroommc.retrosophisticatedbackpacks.client.gui.drawable.Outline
 import com.cleanroommc.retrosophisticatedbackpacks.client.gui.widgets.CyclicVariantButtonWidget
@@ -34,11 +35,17 @@ class AdvancedFilterWidget(
     slotIndex: Int,
     var filterableWrapper: IAdvancedFilterable,
     syncKey: String = "adv_common_filter",
+    private val upstreamLayout: Boolean = false,
 ) : ParentWidget<AdvancedFilterWidget>() {
     companion object {
         private val FILTER_TYPE_VARIANTS = listOf(
             CyclicVariantButtonWidget.Variant(IKey.lang("gui.whitelist".asTranslationKey()), RSBTextures.CHECK_ICON),
             CyclicVariantButtonWidget.Variant(IKey.lang("gui.blacklist".asTranslationKey()), RSBTextures.CROSS_ICON),
+        )
+        private val CONTENTS_FILTER_TYPE_VARIANTS = listOf(
+            CyclicVariantButtonWidget.Variant(IKey.lang("gui.allow".asTranslationKey()), RSBTextures.CHECK_ICON),
+            CyclicVariantButtonWidget.Variant(IKey.lang("gui.block".asTranslationKey()), RSBTextures.CROSS_ICON),
+            CyclicVariantButtonWidget.Variant(IKey.lang("gui.match_backpack_contents".asTranslationKey()), RSBTextures.MATCH_BACKPACK_CONTENTS_ICON),
         )
 
         private val MATCH_TYPE_VARIANTS = listOf(
@@ -99,18 +106,34 @@ class AdvancedFilterWidget(
         syncHandler("upgrades", slotIndex)
 
         filterTypeButton = CyclicVariantButtonWidget(
-            FILTER_TYPE_VARIANTS,
-            filterableWrapper.filterType.ordinal
+            if (filterableWrapper is IContentsFilterable) CONTENTS_FILTER_TYPE_VARIANTS else FILTER_TYPE_VARIANTS,
+            filterButtonIndex(),
+            iconOffset = if (upstreamLayout) 1 else 2,
+            buttonWidth = if (upstreamLayout) 18 else 20,
+            buttonHeight = if (upstreamLayout) 18 else 20,
+            hasCustomTexture = upstreamLayout
         ) { index ->
-            filterableWrapper.filterType = IBasicFilterable.FilterType.entries[index]
-            updateWrapper()
+            updateFilterType(index)
         }
 
         matchTypeButton = CyclicVariantButtonWidget(
             MATCH_TYPE_VARIANTS,
-            filterableWrapper.matchType.ordinal
+            filterableWrapper.matchType.ordinal,
+            iconOffset = if (upstreamLayout) 1 else 2,
+            buttonWidth = if (upstreamLayout) 18 else 20,
+            buttonHeight = if (upstreamLayout) 18 else 20,
+            hasCustomTexture = upstreamLayout
         ) {
             filterableWrapper.matchType = IAdvancedFilterable.MatchType.entries[it]
+            if (filterableWrapper.matchType == IAdvancedFilterable.MatchType.ORE_DICT) {
+                (filterableWrapper as? IContentsFilterable)?.let { contentsFilterable ->
+                    if (contentsFilterable.contentsFilterType == IContentsFilterable.ContentsFilterType.STORAGE) {
+                        contentsFilterable.contentsFilterType = IContentsFilterable.ContentsFilterType.ALLOW
+                        filterTypeButton.selectIndex(contentsFilterable.contentsFilterType.ordinal)
+                        syncContentsFilterType(contentsFilterable.contentsFilterType)
+                    }
+                }
+            }
             updateWrapper()
         }
 
@@ -118,7 +141,11 @@ class AdvancedFilterWidget(
 
         ignoreDurabilityButton = CyclicVariantButtonWidget(
             IGNORE_DURABILITY_VARIANTS,
-            if (filterableWrapper.ignoreDurability) 1 else 0
+            if (filterableWrapper.ignoreDurability) 1 else 0,
+            iconOffset = if (upstreamLayout) 1 else 2,
+            buttonWidth = if (upstreamLayout) 18 else 20,
+            buttonHeight = if (upstreamLayout) 18 else 20,
+            hasCustomTexture = upstreamLayout
         ) {
             filterableWrapper.ignoreDurability = it == 1
             updateWrapper()
@@ -127,30 +154,36 @@ class AdvancedFilterWidget(
 
         ignoreNBTButton = CyclicVariantButtonWidget(
             IGNORE_NBT_VARIANTS,
-            if (filterableWrapper.ignoreNBT) 1 else 0
+            if (filterableWrapper.ignoreNBT) 1 else 0,
+            iconOffset = if (upstreamLayout) 1 else 2,
+            buttonWidth = if (upstreamLayout) 18 else 20,
+            buttonHeight = if (upstreamLayout) 18 else 20,
+            hasCustomTexture = upstreamLayout
         ) {
             filterableWrapper.ignoreNBT = it == 1
             updateWrapper()
         }
-        ignoreDurabilityButton.inEffect = inEffect
+        ignoreNBTButton.inEffect = inEffect
 
         // Buttons
         val buttonRow = Row()
-            .leftRel(0.5f)
-            .size(88, 20)
-            .childPadding(2)
+            .size(if (upstreamLayout) 72 else 88, if (upstreamLayout) 18 else 20)
+            .childPadding(if (upstreamLayout) 0 else 2)
+        if (!upstreamLayout) {
+            buttonRow.leftRel(0.5f)
+        }
 
         val itemBasedConfigButtonRow = Row()
-            .childPadding(2)
-            .size(44, 20)
-            .left(44)
+            .childPadding(if (upstreamLayout) 0 else 2)
+            .size(if (upstreamLayout) 36 else 44, if (upstreamLayout) 18 else 20)
+            .left(if (upstreamLayout) 36 else 44)
             .child(ignoreDurabilityButton)
             .child(ignoreNBTButton)
             .setEnabledIfAndEnabled { filterableWrapper.matchType == IAdvancedFilterable.MatchType.ITEM }
             .name("item_based_button_list")
 
         val addOreDictEntryButton = ButtonWidget()
-            .size(20, 20)
+            .size(if (upstreamLayout) 18 else 20, if (upstreamLayout) 18 else 20)
             .overlay(RSBTextures.ADD_ICON)
             .onMousePressed {
                 val oreName = oreDictTextField.text
@@ -173,7 +206,7 @@ class AdvancedFilterWidget(
             .name("add_ore_dict_button")
 
         val removeOreDictEntryButton = ButtonWidget()
-            .size(20, 20)
+            .size(if (upstreamLayout) 18 else 20, if (upstreamLayout) 18 else 20)
             .overlay(RSBTextures.REMOVE_ICON)
             .onMousePressed {
                 val focusedOreDictEntry = focusedOreDictEntry
@@ -193,9 +226,9 @@ class AdvancedFilterWidget(
             }
 
         val oreDictBasedConfigButtonRow = Row()
-            .size(44, 20)
-            .childPadding(2)
-            .left(44)
+            .size(if (upstreamLayout) 36 else 44, if (upstreamLayout) 18 else 20)
+            .childPadding(if (upstreamLayout) 0 else 2)
+            .left(if (upstreamLayout) 36 else 44)
             .child(addOreDictEntryButton)
             .child(removeOreDictEntryButton)
             .setEnabledIfAndEnabled { filterableWrapper.matchType == IAdvancedFilterable.MatchType.ORE_DICT }
@@ -210,8 +243,14 @@ class AdvancedFilterWidget(
 
         // Item-based configuration widgets
         val slotGroup = SlotGroupWidget().name("${syncKey}s")
-        slotGroup.coverChildren().leftRel(0.5f)
+        slotGroup.coverChildren()
+        if (!upstreamLayout) {
+            slotGroup.leftRel(0.5f)
+        }
         slotGroup.disableSortButtons()
+        slotGroup.setEnabledIfAndEnabled {
+            (filterableWrapper as? IContentsFilterable)?.contentsFilterType != IContentsFilterable.ContentsFilterType.STORAGE
+        }
         filterSlots = mutableListOf<PhantomItemSlot>()
 
         val filterSlotCount = filterableWrapper.filterItems.slots
@@ -225,12 +264,14 @@ class AdvancedFilterWidget(
         }
 
         itemBasedConfigurationGroup = Column()
-            .size(88, 85)
-            .leftRel(0.5f)
-            .top(24)
+            .size(if (upstreamLayout) 72 else 88, 85)
+            .top(if (upstreamLayout) 21 else 24)
             .child(slotGroup)
             .setEnabledIfAndEnabled { filterableWrapper.matchType != IAdvancedFilterable.MatchType.ORE_DICT }
             .name("item_based_config_group") as Column
+        if (!upstreamLayout) {
+            itemBasedConfigurationGroup.leftRel(0.5f)
+        }
 
         // Ore-dict-based configuration widgets
         oreDictTextField = TextFieldWidget()
@@ -270,16 +311,46 @@ class AdvancedFilterWidget(
 
         oreDictBasedConfigurationGroup = Column()
             .size(88, 85)
-            .leftRel(0.5f)
-            .top(24)
+            .top(if (upstreamLayout) 21 else 24)
             .child(oreDictList)
             .child(oreDictTextField)
             .setEnabledIfAndEnabled { filterableWrapper.matchType == IAdvancedFilterable.MatchType.ORE_DICT }
             .name("ore_dict_based_config_group") as Column
+        if (!upstreamLayout) {
+            oreDictBasedConfigurationGroup.leftRel(0.5f)
+        }
 
         child(buttonRow)
             .child(itemBasedConfigurationGroup)
             .child(oreDictBasedConfigurationGroup)
+    }
+
+    private fun filterButtonIndex(): Int =
+        (filterableWrapper as? IContentsFilterable)?.contentsFilterType?.ordinal ?: filterableWrapper.filterType.ordinal
+
+    private fun updateFilterType(index: Int) {
+        val contentsFilterable = filterableWrapper as? IContentsFilterable
+        if (contentsFilterable != null) {
+            var filterType = IContentsFilterable.ContentsFilterType.entries[index]
+            if (filterableWrapper.matchType == IAdvancedFilterable.MatchType.ORE_DICT &&
+                filterType == IContentsFilterable.ContentsFilterType.STORAGE
+            ) {
+                filterType = filterType.next()
+                filterTypeButton.selectIndex(filterType.ordinal)
+            }
+            contentsFilterable.contentsFilterType = filterType
+            syncContentsFilterType(filterType)
+            return
+        }
+
+        filterableWrapper.filterType = IBasicFilterable.FilterType.entries[index]
+        updateWrapper()
+    }
+
+    private fun syncContentsFilterType(filterType: IContentsFilterable.ContentsFilterType) {
+        slotSyncHandler?.syncToServer(UpgradeSlotSH.UPDATE_CONTENTS_FILTERABLE) {
+            it.writeEnumValue(filterType)
+        }
     }
 
     private fun updateWrapper() {

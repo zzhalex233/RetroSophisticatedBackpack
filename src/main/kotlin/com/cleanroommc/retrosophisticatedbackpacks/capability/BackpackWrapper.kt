@@ -105,6 +105,7 @@ class BackpackWrapper(
     private val itemDisplaySlots = linkedSetOf<Int>()
     private val itemDisplayRotations = mutableMapOf<Int, Int>()
     private val slotsToCompact = mutableSetOf<Int>()
+    private var compactingSlotsInitialized = false
     private val slotsToVoid = mutableSetOf<Int>()
     val capturedMobs: MutableList<CapturedMob> = mutableListOf()
     var capturedMobsColumns = 0
@@ -328,7 +329,7 @@ class BackpackWrapper(
             if (player != null) {
                 gatherCapabilityUpgrades(Capabilities.IREFILL_UPGRADE_CAPABILITY).forEach { it.refill(player, this) }
             } else if (gatherCapabilityUpgrades(Capabilities.IREFILL_UPGRADE_CAPABILITY).isNotEmpty()) {
-                val players = world.getEntitiesWithinAABB(EntityPlayer::class.java, AxisAlignedBB(x - 3, y - 3, z - 3, x + 3, y + 3, z + 3))
+                val players = world.getEntitiesWithinAABB(EntityPlayer::class.java, AxisAlignedBB(pos).grow(3.0))
                 players.forEach { nearbyPlayer ->
                     gatherCapabilityUpgrades(Capabilities.IREFILL_UPGRADE_CAPABILITY).forEach { it.refill(nearbyPlayer, this) }
                 }
@@ -336,7 +337,7 @@ class BackpackWrapper(
         }
 
         if (world.totalWorldTime % 10L == 0L) {
-            magnetItems(player, world, x, y, z)
+            magnetItems(player, world, pos)
         }
 
         gatherCapabilityUpgrades(Capabilities.ITANK_UPGRADE_CAPABILITY).forEach { it.tick(this, world) }
@@ -347,7 +348,16 @@ class BackpackWrapper(
 
         val compactingUpgrades = gatherCapabilityUpgrades(Capabilities.ICOMPACTING_UPGRADE_CAPABILITY)
         if (compactingUpgrades.isNotEmpty()) {
-            compactingUpgrades.forEach { it.compact(this, world) }
+            if (!compactingSlotsInitialized) {
+                slotsToCompact.addAll(0 until slots)
+                compactingSlotsInitialized = true
+            }
+            if (world.totalWorldTime % 5L == 0L && slotsToCompact.isNotEmpty()) {
+                compactingUpgrades.forEach { it.compact(this, world) }
+                slotsToCompact.clear()
+            }
+        } else {
+            compactingSlotsInitialized = false
             slotsToCompact.clear()
         }
 
@@ -375,17 +385,17 @@ class BackpackWrapper(
         }
     }
 
-    private fun magnetItems(player: EntityPlayer?, world: World, x: Double, y: Double, z: Double) {
+    private fun magnetItems(player: EntityPlayer?, world: World, pos: BlockPos) {
         val magnetUpgrades = gatherCapabilityUpgrades(Capabilities.IMAGNET_UPGRADE_CAPABILITY)
         if (magnetUpgrades.isEmpty()) {
             return
         }
 
         val range = magnetUpgrades.map(IMagnetUpgrade::range).max()
-        val items = world.getEntitiesWithinAABB(EntityItem::class.java, AxisAlignedBB(x - range, y - range, z - range, x + range, y + range, z + range))
+        val items = world.getEntitiesWithinAABB(EntityItem::class.java, AxisAlignedBB(pos).grow(range))
 
         for (entityItem in items) {
-            if (entityItem.isDead || (entityItem as EntityItemAccessor).`rsb$getPickupDelay`() == 32767 || magnetUpgrades.none { it.canPickup(entityItem.item) }) {
+            if (entityItem.isDead || (entityItem as EntityItemAccessor).`rsb$getPickupDelay`() == 32767 || magnetUpgrades.none { it.canPickup(entityItem.item, this) }) {
                 continue
             }
 
@@ -548,6 +558,21 @@ class BackpackWrapper(
 
     private fun hasMatchingStack(stack: ItemStack): Boolean =
         backpackItemStackHandler.inventory.any { !it.isEmpty && ItemHandlerHelper.canItemStacksStack(it, stack) }
+
+    fun matchesStorageContents(stack: ItemStack, matcher: (ItemStack, ItemStack) -> Boolean): Boolean =
+        (0 until slots).any {
+            val storedStack = getStackInSlot(it)
+            (!storedStack.isEmpty && matcher(stack, storedStack)) || matchesMemoryStack(it, stack, matcher)
+        }
+
+    private fun matchesMemoryStack(slotIndex: Int, stack: ItemStack, matcher: (ItemStack, ItemStack) -> Boolean): Boolean {
+        val memoryStack = getMemorizedStack(slotIndex)
+        return !memoryStack.isEmpty && if (isMemoryStackRespectNBT(slotIndex)) {
+            stack.isItemEqual(memoryStack) && stack.tagCompound == memoryStack.tagCompound
+        } else {
+            matcher(stack, memoryStack)
+        }
+    }
 
     private fun isFull(): Boolean =
         (0 until slots).all {

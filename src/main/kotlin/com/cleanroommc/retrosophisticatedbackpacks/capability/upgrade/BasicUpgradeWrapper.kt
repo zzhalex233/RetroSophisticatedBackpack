@@ -31,8 +31,11 @@ abstract class BasicUpgradeWrapper<T>(filterSlots: Int = 9, override val slotsIn
 
     override fun deserializeNBT(nbt: NBTTagCompound) {
         super.deserializeNBT(nbt)
-        enabled = nbt.getBoolean(IToggleable.ENABLED_TAG)
-        filterItems.deserializeNBT(nbt.getCompoundTag(IBasicFilterable.FILTER_ITEMS_TAG))
-        filterType = IBasicFilterable.FilterType.entries[nbt.getByte(IBasicFilterable.FILTER_TYPE_TAG).toInt()]
+        if (nbt.hasKey(IToggleable.ENABLED_TAG))
+            enabled = nbt.getBoolean(IToggleable.ENABLED_TAG)
+        if (nbt.hasKey(IBasicFilterable.FILTER_ITEMS_TAG))
+            filterItems.deserializeNBT(nbt.getCompoundTag(IBasicFilterable.FILTER_ITEMS_TAG))
+        if (nbt.hasKey(IBasicFilterable.FILTER_TYPE_TAG))
+            filterType = IBasicFilterable.FilterType.entries.getOrElse(nbt.getByte(IBasicFilterable.FILTER_TYPE_TAG).toInt()) { filterType }
     }
 }

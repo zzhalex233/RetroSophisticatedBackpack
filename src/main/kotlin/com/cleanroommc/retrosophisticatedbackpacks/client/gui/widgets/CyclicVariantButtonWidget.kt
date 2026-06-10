@@ -27,6 +27,11 @@ class CyclicVariantButtonWidget(
         private set
     var inEffect: Boolean = true
 
+    fun selectIndex(index: Int) {
+        this.index = index.coerceIn(0, variants.lastIndex)
+        markTooltipDirty()
+    }
+
     init {
         size(buttonWidth, buttonHeight)
             .onMousePressed {
@@ -39,6 +44,9 @@ class CyclicVariantButtonWidget(
             }.tooltipAutoUpdate(true)
             .tooltipDynamic {
                 it.addLine(variants[this.index].name)
+                for (detailLine in variants[this.index].detailLines) {
+                    it.addLine(detailLine)
+                }
 
                 if (!inEffect) {
                     it.addLine(IKey.lang("gui.not_in_effect".asTranslationKey()).style(IKey.RED))
@@ -73,5 +81,5 @@ class CyclicVariantButtonWidget(
         }
     }
 
-    data class Variant(val name: IKey, val drawable: IDrawable)
+    data class Variant(val name: IKey, val drawable: IDrawable, val detailLines: List<IKey> = emptyList())
 }

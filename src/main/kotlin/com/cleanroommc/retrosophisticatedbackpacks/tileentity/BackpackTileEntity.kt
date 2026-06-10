@@ -138,7 +138,7 @@ class BackpackTileEntity(val wrapper: BackpackWrapper = BackpackWrapper()) :
         else TextComponentTranslation("container.backpack".asTranslationKey())
 
     override fun update() {
-        if (!world.isRemote && world.totalWorldTime % 5L == 0L) {
+        if (!world.isRemote) {
             wrapper.tickUpgrades(null, world, pos.x + 0.5, pos.y + 0.5, pos.z + 0.5, pos)
             syncTankState()
             syncBatteryState()

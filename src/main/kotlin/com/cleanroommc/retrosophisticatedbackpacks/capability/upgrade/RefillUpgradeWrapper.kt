@@ -11,6 +11,7 @@ import net.minecraft.nbt.NBTTagCompound
 import net.minecraft.nbt.NBTTagList
 import net.minecraft.util.EnumFacing
 import net.minecraft.util.EnumHand
+import net.minecraft.util.text.TextFormatting
 import net.minecraftforge.common.capabilities.Capability
 import net.minecraftforge.common.util.Constants
 import net.minecraftforge.items.ItemHandlerHelper
@@ -72,13 +73,14 @@ open class RefillUpgradeWrapper(
     enum class TargetSlot {
         ANY {
             override fun getMissingCount(player: EntityPlayer, filter: ItemStack): Int {
-                var count = 0
+                var count = filter.maxStackSize
                 for (slot in 0 until player.inventory.mainInventory.size) {
                     val stack = player.inventory.getStackInSlot(slot)
-                    if (stack.isEmpty) {
-                        count += filter.maxStackSize
-                    } else if (ItemHandlerHelper.canItemStacksStack(stack, filter)) {
-                        count += stack.maxStackSize - stack.count
+                    if (ItemHandlerHelper.canItemStacksStack(stack, filter)) {
+                        count -= minOf(stack.count, count)
+                        if (count <= 0) {
+                            return 0
+                        }
                     }
                 }
                 return count
@@ -104,8 +106,12 @@ open class RefillUpgradeWrapper(
                     if (!player.inventory.getStackInSlot(slot).isEmpty) {
                         continue
                     }
-                    player.inventory.setInventorySlotContents(slot, remaining.copy())
-                    return ItemStack.EMPTY
+                    val moved = minOf(remaining.count, remaining.maxStackSize)
+                    player.inventory.setInventorySlotContents(slot, ItemHandlerHelper.copyStackWithSize(remaining, moved))
+                    remaining.shrink(moved)
+                    if (remaining.isEmpty) {
+                        return ItemStack.EMPTY
+                    }
                 }
                 return remaining
             }
@@ -125,6 +131,32 @@ open class RefillUpgradeWrapper(
                 refillSlot(player.heldItemOffhand, stack) { player.setHeldItem(net.minecraft.util.EnumHand.OFF_HAND, it) }
         },
         HOTBAR_1, HOTBAR_2, HOTBAR_3, HOTBAR_4, HOTBAR_5, HOTBAR_6, HOTBAR_7, HOTBAR_8, HOTBAR_9;
+
+        fun next(): TargetSlot =
+            entries[(ordinal + 1) % entries.size]
+
+        fun previous(): TargetSlot =
+            entries[Math.floorMod(ordinal - 1, entries.size)]
+
+        fun acronym(): String = when (this) {
+            ANY -> "A"
+            MAIN_HAND -> "M"
+            OFF_HAND -> "O"
+            else -> (ordinal - HOTBAR_1.ordinal + 1).toString()
+        }
+
+        fun descriptionKey(): String = when (this) {
+            ANY -> "gui.refill_target_any".asTranslationKey()
+            MAIN_HAND -> "gui.refill_target_main_hand".asTranslationKey()
+            OFF_HAND -> "gui.refill_target_off_hand".asTranslationKey()
+            else -> "gui.refill_target_hotbar_${descriptionArg()}".asTranslationKey()
+        }
+
+        fun descriptionArg(): String =
+            (ordinal - HOTBAR_1.ordinal + 1).toString()
+
+        fun descriptionColor(): TextFormatting =
+            TextFormatting.DARK_GREEN
 
         open fun getMissingCount(player: EntityPlayer, filter: ItemStack): Int {
             val slot = ordinal - HOTBAR_1.ordinal

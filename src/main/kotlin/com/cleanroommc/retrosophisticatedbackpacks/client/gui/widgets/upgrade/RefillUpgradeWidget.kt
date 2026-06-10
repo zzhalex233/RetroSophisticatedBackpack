@@ -1,67 +1,116 @@
 package com.cleanroommc.retrosophisticatedbackpacks.client.gui.widgets.upgrade
 
-import com.cleanroommc.modularui.api.drawable.IDrawable
+import com.cleanroommc.modularui.api.UpOrDown
 import com.cleanroommc.modularui.api.drawable.IKey
-import com.cleanroommc.modularui.drawable.ItemDrawable
-import com.cleanroommc.modularui.widgets.layout.Row
+import com.cleanroommc.modularui.screen.RichTooltip
+import com.cleanroommc.modularui.screen.viewport.ModularGuiContext
+import com.cleanroommc.modularui.theme.WidgetThemeEntry
+import com.cleanroommc.modularui.widgets.slot.PhantomItemSlot
 import com.cleanroommc.retrosophisticatedbackpacks.capability.upgrade.AdvancedRefillUpgradeWrapper
 import com.cleanroommc.retrosophisticatedbackpacks.capability.upgrade.RefillUpgradeWrapper
-import com.cleanroommc.retrosophisticatedbackpacks.client.gui.RSBTextures
-import com.cleanroommc.retrosophisticatedbackpacks.client.gui.widgets.CyclicVariantButtonWidget
 import com.cleanroommc.retrosophisticatedbackpacks.sync.UpgradeSlotSH
 import com.cleanroommc.retrosophisticatedbackpacks.util.Utils.asTranslationKey
-import net.minecraft.init.Items
+import net.minecraft.client.Minecraft
+import net.minecraft.client.renderer.GlStateManager
+import net.minecraft.client.resources.I18n
 import net.minecraft.item.ItemStack
+import net.minecraft.util.text.TextFormatting
 
 class RefillUpgradeWidget(slotIndex: Int, wrapper: RefillUpgradeWrapper, stack: ItemStack) :
-    BasicExpandedTabWidget<RefillUpgradeWrapper>(slotIndex, wrapper, stack, wrapper.settingsLangKey) {
+    BasicExpandedTabWidget<RefillUpgradeWrapper>(
+        slotIndex,
+        wrapper,
+        stack,
+        wrapper.settingsLangKey,
+        coveredTabSize = refillCoveredTabSize(wrapper),
+        width = refillTabWidth(wrapper),
+        upstreamLayout = true,
+        contentX = 3,
+        contentY = 24,
+        contentWidth = wrapper.slotsInRow * 18,
+        contentPadding = 0,
+        filterWidth = wrapper.slotsInRow * 18,
+        showFilterButton = false
+    ) {
     init {
         startingRow.height(0)
     }
 }
 
 class AdvancedRefillUpgradeWidget(slotIndex: Int, wrapper: AdvancedRefillUpgradeWrapper, stack: ItemStack) :
-    BasicExpandedTabWidget<AdvancedRefillUpgradeWrapper>(slotIndex, wrapper, stack, wrapper.settingsLangKey, width = 130) {
+    BasicExpandedTabWidget<AdvancedRefillUpgradeWrapper>(
+        slotIndex,
+        wrapper,
+        stack,
+        wrapper.settingsLangKey,
+        filterSyncKey = "adv_common_filter",
+        coveredTabSize = refillCoveredTabSize(wrapper),
+        width = refillTabWidth(wrapper),
+        upstreamLayout = true,
+        contentX = 3,
+        contentY = 24,
+        contentWidth = wrapper.slotsInRow * 18,
+        contentPadding = 0,
+        filterWidth = wrapper.slotsInRow * 18,
+        showFilterButton = false,
+        slotFactory = { filterSlot, syncHandler -> RefillTargetSlot(wrapper, filterSlot, syncHandler) }
+    ) {
     init {
-        startingRow
-            .height(42)
-            .childPadding(1)
-            .child(targetRow(wrapper, 0, 6))
-            .child(targetRow(wrapper, 6, 12))
+        startingRow.height(0)
     }
-
-    private fun targetRow(wrapper: AdvancedRefillUpgradeWrapper, start: Int, end: Int): Row {
-        val row = Row().height(20).childPadding(1) as Row
-        for (filterSlot in start until end) {
-            row.child(createTargetButton(wrapper, filterSlot))
-        }
-        return row
-    }
-
-    private fun createTargetButton(wrapper: AdvancedRefillUpgradeWrapper, filterSlot: Int): CyclicVariantButtonWidget =
-        CyclicVariantButtonWidget(
-            RefillUpgradeWrapper.TargetSlot.entries.map { CyclicVariantButtonWidget.Variant(it.langKey(), it.icon()) },
-            wrapper.getTargetSlot(filterSlot).ordinal,
-            iconOffset = 4,
-            iconSize = 12,
-            buttonWidth = 18,
-            buttonHeight = 18
-        ) { index ->
-            wrapper.setTargetSlot(filterSlot, RefillUpgradeWrapper.TargetSlot.entries[index])
-            slotSyncHandler?.syncToServer(UpgradeSlotSH.UPDATE_REFILL_TARGET_SLOT) {
-                it.writeInt(filterSlot)
-                it.writeEnumValue(RefillUpgradeWrapper.TargetSlot.entries[index])
-            }
-        }
 }
 
-private fun RefillUpgradeWrapper.TargetSlot.langKey(): IKey =
-    IKey.lang("gui.refill_target_${name.lowercase()}".asTranslationKey())
+private fun refillTabWidth(wrapper: RefillUpgradeWrapper): Int =
+    maxOf(75, 3 + wrapper.slotsInRow * 18 + 6)
 
-private fun RefillUpgradeWrapper.TargetSlot.icon(): IDrawable =
-    when (this) {
-        RefillUpgradeWrapper.TargetSlot.ANY -> RSBTextures.SMALL_A_ICON
-        RefillUpgradeWrapper.TargetSlot.MAIN_HAND -> RSBTextures.SMALL_M_ICON
-        RefillUpgradeWrapper.TargetSlot.OFF_HAND -> RSBTextures.SMALL_O_ICON
-        else -> ItemDrawable(ItemStack(Items.PAPER, 1, ordinal - RefillUpgradeWrapper.TargetSlot.HOTBAR_1.ordinal + 1))
+private fun refillCoveredTabSize(wrapper: RefillUpgradeWrapper): Int {
+    val slotsInRow = wrapper.slotsInRow.coerceAtLeast(1)
+    val rows = (wrapper.filterItems.slots + slotsInRow - 1) / slotsInRow
+    return ((24 + rows * 18 + 6 + 29) / 30).coerceAtLeast(3)
+}
+
+private class RefillTargetSlot(
+    private val wrapper: AdvancedRefillUpgradeWrapper,
+    private val filterSlot: Int,
+    private val upgradeSyncHandler: () -> UpgradeSlotSH?
+) : PhantomItemSlot() {
+    override fun onMouseScroll(scrollDirection: UpOrDown, amount: Int): Boolean {
+        if (slot.stack.isEmpty) {
+            return super.onMouseScroll(scrollDirection, amount)
+        }
+
+        val targetSlot = if (scrollDirection.isUp) wrapper.getTargetSlot(filterSlot).next()
+        else wrapper.getTargetSlot(filterSlot).previous()
+        wrapper.setTargetSlot(filterSlot, targetSlot)
+        upgradeSyncHandler()?.syncToServer(UpgradeSlotSH.UPDATE_REFILL_TARGET_SLOT) {
+            it.writeInt(filterSlot)
+            it.writeEnumValue(targetSlot)
+        }
+        markTooltipDirty()
+        return true
     }
+
+    override fun drawOverlay(context: ModularGuiContext?, widgetTheme: WidgetThemeEntry<*>?) {
+        super.drawOverlay(context, widgetTheme)
+        if (!isSynced || slot.stack.isEmpty) {
+            return
+        }
+
+        GlStateManager.disableLighting()
+        GlStateManager.disableDepth()
+        Minecraft.getMinecraft().fontRenderer.drawString(wrapper.getTargetSlot(filterSlot).acronym(), 10, 2, 0x55FF55)
+        GlStateManager.enableDepth()
+    }
+
+    override fun buildTooltip(stack: ItemStack, tooltip: RichTooltip) {
+        super.buildTooltip(stack, tooltip)
+        if (stack.isEmpty) {
+            return
+        }
+
+        val targetSlot = wrapper.getTargetSlot(filterSlot)
+        val targetDescription = I18n.format(targetSlot.descriptionKey())
+        tooltip.addLine(IKey.str(I18n.format("gui.refill_target_tooltip".asTranslationKey(), targetDescription)).style(targetSlot.descriptionColor()))
+            .addLine(IKey.lang("gui.refill_scroll_tooltip".asTranslationKey()).style(TextFormatting.DARK_GRAY, TextFormatting.ITALIC))
+    }
+}

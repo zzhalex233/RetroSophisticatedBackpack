@@ -42,6 +42,7 @@ class FilterUpgradeWrapper :
 
     override fun deserializeNBT(nbt: NBTTagCompound) {
         super.deserializeNBT(nbt)
-        filterWay = IFilterUpgrade.FilterWayType.entries[nbt.getByte(IFilterUpgrade.FILTER_WAY_TAG).toInt()]
+        if (nbt.hasKey(IFilterUpgrade.FILTER_WAY_TAG))
+            filterWay = IFilterUpgrade.FilterWayType.entries.getOrElse(nbt.getByte(IFilterUpgrade.FILTER_WAY_TAG).toInt()) { filterWay }
     }
 }

@@ -52,8 +52,10 @@ class VoidUpgradeWrapper :
 
     override fun deserializeNBT(nbt: NBTTagCompound) {
         super.deserializeNBT(nbt)
-        voidType = VoidType.entries.getOrElse(nbt.getByte(VOID_TYPE_TAG).toInt()) { VoidType.ALWAYS }
-        shouldWorkInGui = nbt.getBoolean(SHOULD_WORK_IN_GUI_TAG)
+        if (nbt.hasKey(VOID_TYPE_TAG))
+            voidType = VoidType.entries.getOrElse(nbt.getByte(VOID_TYPE_TAG).toInt()) { voidType }
+        if (nbt.hasKey(SHOULD_WORK_IN_GUI_TAG))
+            shouldWorkInGui = nbt.getBoolean(SHOULD_WORK_IN_GUI_TAG)
     }
 
     private fun normalizeVoidType(type: VoidType): VoidType =
@@ -107,8 +109,10 @@ class AdvancedVoidUpgradeWrapper :
 
     override fun deserializeNBT(nbt: NBTTagCompound) {
         super.deserializeNBT(nbt)
-        voidType = VoidType.entries.getOrElse(nbt.getByte(VOID_TYPE_TAG).toInt()) { VoidType.ALWAYS }
-        shouldWorkInGui = nbt.getBoolean(SHOULD_WORK_IN_GUI_TAG)
+        if (nbt.hasKey(VOID_TYPE_TAG))
+            voidType = VoidType.entries.getOrElse(nbt.getByte(VOID_TYPE_TAG).toInt()) { voidType }
+        if (nbt.hasKey(SHOULD_WORK_IN_GUI_TAG))
+            shouldWorkInGui = nbt.getBoolean(SHOULD_WORK_IN_GUI_TAG)
     }
 
     private fun normalizeVoidType(type: VoidType): VoidType =

@@ -962,7 +962,7 @@ class BackpackPanel(
 
     internal fun addUpgradeTabs() {
         for (i in 0 until backpackWrapper.upgradeSlotsSize()) {
-            val tab = TabWidget(i + 1).name("upgrade_tab_${i}")
+            val tab = TabWidget(i + 2).name("upgrade_tab_${i}")
 
             tab.isEnabled = false
             tabWidgets.add(tab)
@@ -1180,7 +1180,7 @@ class BackpackPanel(
             }
         }
         // Shifted forward to account for settings tab.
-        var tabDisplayIndex = 1
+        var tabDisplayIndex = 2
 
         // Sync all tabs to their corresponding upgrade
         for (slotIndex in 0 until backpackWrapper.upgradeSlotsSize()) {
@@ -1263,6 +1263,26 @@ class BackpackPanel(
                         tabWidget.expandedWidget = FilterUpgradeWidget(slotIndex, wrapper)
                 }
 
+                is AdvancedMagnetUpgradeWrapper -> {
+                    upgradeSlotGroup.updateAdvancedFilterDelegate(wrapper)
+                    if (updateAndCheckRecreation<AdvancedMagnetUpgradeWidget, AdvancedMagnetUpgradeWrapper>(
+                            tabWidget.expandedWidget,
+                            wrapper
+                        )
+                    )
+                        tabWidget.expandedWidget = AdvancedMagnetUpgradeWidget(slotIndex, wrapper, stack)
+                }
+
+                is MagnetUpgradeWrapper -> {
+                    upgradeSlotGroup.updateFilterDelegate(wrapper)
+                    if (updateAndCheckRecreation<MagnetUpgradeWidget, MagnetUpgradeWrapper>(
+                            tabWidget.expandedWidget,
+                            wrapper
+                        )
+                    )
+                        tabWidget.expandedWidget = MagnetUpgradeWidget(slotIndex, wrapper, stack)
+                }
+
                 is AdvancedVoidUpgradeWrapper -> {
                     upgradeSlotGroup.updateAdvancedFilterDelegate(wrapper)
                     if (updateAndCheckRecreation<AdvancedVoidUpgradeWidget, AdvancedVoidUpgradeWrapper>(
@@ -1284,7 +1304,7 @@ class BackpackPanel(
                 }
 
                 is AdvancedRefillUpgradeWrapper -> {
-                    upgradeSlotGroup.updateFilterDelegate(wrapper)
+                    upgradeSlotGroup.updateLargeBasicFilterDelegate(wrapper)
                     if (updateAndCheckRecreation<AdvancedRefillUpgradeWidget, AdvancedRefillUpgradeWrapper>(
                             tabWidget.expandedWidget,
                             wrapper
@@ -1325,12 +1345,12 @@ class BackpackPanel(
 
                 is AdvancedJukeboxUpgradeWrapper -> {
                     upgradeSlotGroup.updateJukeboxDelegate(wrapper)
-                    if (updateAndCheckRecreation<JukeboxUpgradeWidget, JukeboxUpgradeWrapper>(
+                    if (updateAndCheckRecreation<AdvancedJukeboxUpgradeWidget, AdvancedJukeboxUpgradeWrapper>(
                             tabWidget.expandedWidget,
                             wrapper
                         )
                     )
-                        tabWidget.expandedWidget = JukeboxUpgradeWidget(slotIndex, wrapper, stack, wrapper.discInventory.slots)
+                        tabWidget.expandedWidget = AdvancedJukeboxUpgradeWidget(slotIndex, wrapper, stack)
                 }
 
                 is JukeboxUpgradeWrapper -> {
@@ -1340,7 +1360,7 @@ class BackpackPanel(
                             wrapper
                         )
                     )
-                        tabWidget.expandedWidget = JukeboxUpgradeWidget(slotIndex, wrapper, stack, wrapper.discInventory.slots)
+                        tabWidget.expandedWidget = JukeboxUpgradeWidget(slotIndex, wrapper, stack)
                 }
 
                 is AdvancedToolSwapperUpgradeWrapper -> {

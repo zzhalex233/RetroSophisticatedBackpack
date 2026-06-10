@@ -95,12 +95,20 @@ class AnvilUpgradeWrapper : UpgradeWrapper<AnvilUpgradeItem>(), IAnvilUpgrade {
 
     override fun deserializeNBT(nbt: NBTTagCompound) {
         super.deserializeNBT(nbt)
-        inventory.deserializeNBT(nbt.getCompoundTag(INVENTORY_TAG))
-        shouldShiftClickIntoStorage = if (nbt.hasKey(SHIFT_CLICK_TAG)) nbt.getBoolean(SHIFT_CLICK_TAG) else true
-        itemName = nbt.getString(ITEM_NAME_TAG)
-        maximumCost = nbt.getInteger(MAXIMUM_COST_TAG)
-        materialCost = nbt.getInteger(MATERIAL_COST_TAG)
-        result = if (nbt.hasKey(RESULT_TAG)) ItemStack(nbt.getCompoundTag(RESULT_TAG)) else ItemStack.EMPTY
+        if (nbt.hasKey(INVENTORY_TAG))
+            inventory.deserializeNBT(nbt.getCompoundTag(INVENTORY_TAG))
+        if (nbt.hasKey(SHIFT_CLICK_TAG))
+            shouldShiftClickIntoStorage = nbt.getBoolean(SHIFT_CLICK_TAG)
+        if (nbt.hasKey(ITEM_NAME_TAG))
+            itemName = nbt.getString(ITEM_NAME_TAG)
+        if (nbt.hasKey(MAXIMUM_COST_TAG))
+            maximumCost = nbt.getInteger(MAXIMUM_COST_TAG)
+        if (nbt.hasKey(MATERIAL_COST_TAG))
+            materialCost = nbt.getInteger(MATERIAL_COST_TAG)
+        if (nbt.hasKey(RESULT_TAG))
+            result = ItemStack(nbt.getCompoundTag(RESULT_TAG))
+        else if (nbt.hasKey(INVENTORY_TAG))
+            result = ItemStack.EMPTY
     }
 
     override fun hasCapability(capability: Capability<*>, facing: EnumFacing?): Boolean =

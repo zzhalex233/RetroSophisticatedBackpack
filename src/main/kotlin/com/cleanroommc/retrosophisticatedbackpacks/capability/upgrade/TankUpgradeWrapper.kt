@@ -301,8 +301,12 @@ class TankUpgradeWrapper : UpgradeWrapper<TankUpgradeItem>(), ITankUpgrade {
 
     override fun deserializeNBT(nbt: NBTTagCompound) {
         super.deserializeNBT(nbt)
-        fluid = if (nbt.hasKey(FLUID_TAG)) FluidStack.loadFluidStackFromNBT(nbt.getCompoundTag(FLUID_TAG)) else null
-        inventory.deserializeNBT(nbt.getCompoundTag(INVENTORY_TAG))
+        if (nbt.hasKey(FLUID_TAG))
+            fluid = FluidStack.loadFluidStackFromNBT(nbt.getCompoundTag(FLUID_TAG))
+        else if (nbt.hasKey(INVENTORY_TAG))
+            fluid = null
+        if (nbt.hasKey(INVENTORY_TAG))
+            inventory.deserializeNBT(nbt.getCompoundTag(INVENTORY_TAG))
     }
 
     override fun hasCapability(capability: Capability<*>, facing: EnumFacing?): Boolean =

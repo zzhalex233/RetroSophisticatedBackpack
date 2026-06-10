@@ -8,6 +8,7 @@ import com.cleanroommc.retrosophisticatedbackpacks.capability.upgrade.CraftingUp
 import com.cleanroommc.retrosophisticatedbackpacks.capability.upgrade.IAdvancedFilterable
 import com.cleanroommc.retrosophisticatedbackpacks.capability.upgrade.IAnvilUpgrade
 import com.cleanroommc.retrosophisticatedbackpacks.capability.upgrade.IBasicFilterable
+import com.cleanroommc.retrosophisticatedbackpacks.capability.upgrade.IContentsFilterable
 import com.cleanroommc.retrosophisticatedbackpacks.capability.upgrade.IFilterUpgrade
 import com.cleanroommc.retrosophisticatedbackpacks.capability.upgrade.IPumpUpgrade
 import com.cleanroommc.retrosophisticatedbackpacks.capability.upgrade.JukeboxUpgradeWrapper
@@ -64,6 +65,8 @@ class UpgradeSlotSH(
         const val UPDATE_ANVIL_SHIFT_CLICK = 33
         const val UPDATE_ANVIL_TAKE_RESULT = 34
         const val UPDATE_REOPEN_BACKPACK = 35
+        const val UPDATE_MAGNET_PICKUP_ITEMS = 36
+        const val UPDATE_CONTENTS_FILTERABLE = 37
     }
 
     private var lastCapabilityNbt = NBTTagCompound()
@@ -122,6 +125,8 @@ class UpgradeSlotSH(
             UPDATE_ANVIL_SHIFT_CLICK -> updateAnvilShiftClick()
             UPDATE_ANVIL_TAKE_RESULT -> updateAnvilTakeResult()
             UPDATE_REOPEN_BACKPACK -> reopenBackpackGui()
+            UPDATE_MAGNET_PICKUP_ITEMS -> updateMagnetPickupItems()
+            UPDATE_CONTENTS_FILTERABLE -> updateContentsFilterable(buf)
         }
     }
 
@@ -204,6 +209,16 @@ class UpgradeSlotSH(
     private fun updateCompactWorkInGui() {
         slot.stack.getCapability(Capabilities.COMPACTING_UPGRADE_CAPABILITY, null)?.toggleWorkInGui()
         slot.stack.getCapability(Capabilities.ADVANCED_COMPACTING_UPGRADE_CAPABILITY, null)?.toggleWorkInGui()
+    }
+
+    private fun updateMagnetPickupItems() {
+        slot.stack.getCapability(Capabilities.MAGNET_UPGRADE_CAPABILITY, null)?.togglePickupItems()
+        slot.stack.getCapability(Capabilities.ADVANCED_MAGNET_UPGRADE_CAPABILITY, null)?.togglePickupItems()
+    }
+
+    private fun updateContentsFilterable(buf: PacketBuffer) {
+        val filterType = buf.readEnumValue(IContentsFilterable.ContentsFilterType::class.java)
+        (slot.stack.getCapability(Capabilities.UPGRADE_CAPABILITY, null) as? IContentsFilterable)?.contentsFilterType = filterType
     }
 
     private fun updateRefillTargetSlot(buf: PacketBuffer) {

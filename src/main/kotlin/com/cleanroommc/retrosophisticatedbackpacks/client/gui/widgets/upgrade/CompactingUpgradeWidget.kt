@@ -10,7 +10,18 @@ import com.cleanroommc.retrosophisticatedbackpacks.util.Utils.asTranslationKey
 import net.minecraft.item.ItemStack
 
 class CompactingUpgradeWidget(slotIndex: Int, wrapper: CompactingUpgradeWrapper, stack: ItemStack) :
-    BasicExpandedTabWidget<CompactingUpgradeWrapper>(slotIndex, wrapper, stack, wrapper.settingsLangKey) {
+    BasicExpandedTabWidget<CompactingUpgradeWrapper>(
+        slotIndex,
+        wrapper,
+        stack,
+        wrapper.settingsLangKey,
+        upstreamLayout = true,
+        contentX = 3,
+        contentY = 24,
+        contentWidth = wrapper.slotsInRow * 18,
+        contentPadding = 0,
+        filterWidth = wrapper.slotsInRow * 18
+    ) {
     init {
         startingRow
             .height(20)
@@ -22,14 +33,25 @@ class CompactingUpgradeWidget(slotIndex: Int, wrapper: CompactingUpgradeWrapper,
     }
 
     private fun createCompactModeButton(compactNonUncraftable: Boolean): CyclicVariantButtonWidget =
-        CyclicVariantButtonWidget(COMPACT_MODE_VARIANTS, if (compactNonUncraftable) 1 else 0) {
+        upstreamButton(COMPACT_MODE_VARIANTS, if (compactNonUncraftable) 1 else 0) {
             wrapper.compactNonUncraftable = !wrapper.compactNonUncraftable
             slotSyncHandler?.syncToServer(UpgradeSlotSH.UPDATE_COMPACT_NON_UNCRAFTABLE) {}
         }
 }
 
 class AdvancedCompactingUpgradeWidget(slotIndex: Int, wrapper: AdvancedCompactingUpgradeWrapper, stack: ItemStack) :
-    AdvancedExpandedTabWidget<AdvancedCompactingUpgradeWrapper>(slotIndex, wrapper, stack, wrapper.settingsLangKey) {
+    AdvancedExpandedTabWidget<AdvancedCompactingUpgradeWrapper>(
+        slotIndex,
+        wrapper,
+        stack,
+        wrapper.settingsLangKey,
+        upstreamLayout = true,
+        contentX = 3,
+        contentY = 24,
+        contentWidth = wrapper.slotsInRow * 18,
+        contentPadding = 0,
+        filterWidth = wrapper.slotsInRow * 18
+    ) {
     init {
         startingRow
             .height(20)
@@ -41,25 +63,19 @@ class AdvancedCompactingUpgradeWidget(slotIndex: Int, wrapper: AdvancedCompactin
     }
 
     private fun createCompactModeButton(compactNonUncraftable: Boolean): CyclicVariantButtonWidget =
-        CyclicVariantButtonWidget(COMPACT_MODE_VARIANTS, if (compactNonUncraftable) 1 else 0) {
+        upstreamButton(COMPACT_MODE_VARIANTS, if (compactNonUncraftable) 1 else 0) {
             wrapper.compactNonUncraftable = !wrapper.compactNonUncraftable
             slotSyncHandler?.syncToServer(UpgradeSlotSH.UPDATE_COMPACT_NON_UNCRAFTABLE) {}
         }
 }
 
-private val COMPACT_MODE_VARIANTS =
-        listOf(
-            CyclicVariantButtonWidget.Variant(IKey.lang("gui.compact_uncraftable_only".asTranslationKey()), RSBTextures.CHECK_ICON),
-            CyclicVariantButtonWidget.Variant(IKey.lang("gui.compact_any_recipe".asTranslationKey()), RSBTextures.CROSS_ICON),
-        )
-
-private fun createWorkInGuiButton(shouldWorkInGui: Boolean, toggle: () -> Unit): CyclicVariantButtonWidget =
-    CyclicVariantButtonWidget(WORK_IN_GUI_VARIANTS, if (shouldWorkInGui) 1 else 0) {
-        toggle()
-    }
-
-private val WORK_IN_GUI_VARIANTS =
-    listOf(
-        CyclicVariantButtonWidget.Variant(IKey.lang("gui.work_in_gui_disabled".asTranslationKey()), RSBTextures.CROSS_ICON),
-        CyclicVariantButtonWidget.Variant(IKey.lang("gui.work_in_gui_enabled".asTranslationKey()), RSBTextures.CHECK_ICON),
-    )
+private val COMPACT_MODE_VARIANTS = listOf(
+    CyclicVariantButtonWidget.Variant(
+        IKey.lang("gui.compact_only_uncraftable".asTranslationKey()),
+        RSBTextures.COMPACT_ONLY_UNCRAFTABLE_ICON
+    ),
+    CyclicVariantButtonWidget.Variant(
+        IKey.lang("gui.compact_anything".asTranslationKey()),
+        RSBTextures.COMPACT_ANYTHING_ICON
+    ),
+)

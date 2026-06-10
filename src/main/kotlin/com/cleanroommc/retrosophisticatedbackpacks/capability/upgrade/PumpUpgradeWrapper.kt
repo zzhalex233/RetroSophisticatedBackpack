@@ -254,8 +254,10 @@ open class PumpUpgradeWrapper(
         interactWithHand = if (nbt.hasKey(HAND_TAG)) nbt.getBoolean(HAND_TAG) else interactWithHand
         interactWithWorld = if (nbt.hasKey(WORLD_TAG)) nbt.getBoolean(WORLD_TAG) else interactWithWorld
         interactWithFluidHandlers = if (nbt.hasKey(FLUID_HANDLERS_TAG)) nbt.getBoolean(FLUID_HANDLERS_TAG) else interactWithFluidHandlers
-        cooldownUntil = nbt.getLong(COOLDOWN_UNTIL_TAG)
-        lastHandAction = nbt.getLong(LAST_HAND_ACTION_TAG)
+        if (nbt.hasKey(COOLDOWN_UNTIL_TAG))
+            cooldownUntil = nbt.getLong(COOLDOWN_UNTIL_TAG)
+        if (nbt.hasKey(LAST_HAND_ACTION_TAG))
+            lastHandAction = nbt.getLong(LAST_HAND_ACTION_TAG)
         for (slot in fluidFilters.indices) {
             fluidFilters[slot] = if (nbt.hasKey("$FILTER_TAG$slot")) {
                 FluidStack.loadFluidStackFromNBT(nbt.getCompoundTag("$FILTER_TAG$slot"))
