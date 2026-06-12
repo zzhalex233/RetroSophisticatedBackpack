@@ -15,7 +15,8 @@ class MagnetUpgradeWidget(slotIndex: Int, wrapper: MagnetUpgradeWrapper, stack: 
         wrapper,
         stack,
         wrapper.settingsLangKey,
-        upstreamLayout = true,
+        coveredTabSize = filterTabSize(wrapper.filterItems.slots, wrapper.slotsInRow),
+        width = filterTabWidth(wrapper.slotsInRow),
         contentX = 3,
         contentY = 24,
         contentWidth = wrapper.slotsInRow * 18,
@@ -29,7 +30,7 @@ class MagnetUpgradeWidget(slotIndex: Int, wrapper: MagnetUpgradeWrapper, stack: 
     }
 
     private fun createPickupItemsButton(pickupItems: Boolean): CyclicVariantButtonWidget =
-        upstreamButton(PICKUP_ITEMS_VARIANTS, if (pickupItems) 0 else 1) {
+        tabIconButton(PICKUP_ITEMS_VARIANTS, if (pickupItems) 0 else 1) {
             wrapper.pickupItems = !wrapper.pickupItems
             slotSyncHandler?.syncToServer(UpgradeSlotSH.UPDATE_MAGNET_PICKUP_ITEMS) {}
         }
@@ -41,7 +42,8 @@ class AdvancedMagnetUpgradeWidget(slotIndex: Int, wrapper: AdvancedMagnetUpgrade
         wrapper,
         stack,
         wrapper.settingsLangKey,
-        upstreamLayout = true,
+        coveredTabSize = filterTabSize(wrapper.filterItems.slots, wrapper.slotsInRow),
+        width = filterTabWidth(wrapper.slotsInRow),
         contentX = 3,
         contentY = 24,
         contentWidth = wrapper.slotsInRow * 18,
@@ -55,7 +57,7 @@ class AdvancedMagnetUpgradeWidget(slotIndex: Int, wrapper: AdvancedMagnetUpgrade
     }
 
     private fun createPickupItemsButton(pickupItems: Boolean): CyclicVariantButtonWidget =
-        upstreamButton(PICKUP_ITEMS_VARIANTS, if (pickupItems) 0 else 1) {
+        tabIconButton(PICKUP_ITEMS_VARIANTS, if (pickupItems) 0 else 1) {
             wrapper.pickupItems = !wrapper.pickupItems
             slotSyncHandler?.syncToServer(UpgradeSlotSH.UPDATE_MAGNET_PICKUP_ITEMS) {}
         }

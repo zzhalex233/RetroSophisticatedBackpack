@@ -4,6 +4,8 @@ import com.cleanroommc.retrosophisticatedbackpacks.network.C2SOpenBackpackPacket
 import com.cleanroommc.retrosophisticatedbackpacks.network.C2SMobCatcherReleasePacket
 import com.cleanroommc.retrosophisticatedbackpacks.network.C2SRefillBlockPickPacket
 import com.cleanroommc.retrosophisticatedbackpacks.network.C2SStashToBackpackPacket
+import com.cleanroommc.retrosophisticatedbackpacks.network.C2SToolSwapBlockPacket
+import com.cleanroommc.retrosophisticatedbackpacks.network.C2SToolSwapEntityPacket
 import com.cleanroommc.retrosophisticatedbackpacks.network.S2CMobCatcherContentsPacket
 import net.minecraftforge.fml.common.network.NetworkRegistry
 import net.minecraftforge.fml.common.network.simpleimpl.SimpleNetworkWrapper
@@ -36,6 +38,18 @@ object NetworkHandler {
         INSTANCE.registerMessage(
             C2SStashToBackpackPacket.Handler::class.java,
             C2SStashToBackpackPacket::class.java,
+            idGenerator.next(),
+            Side.SERVER
+        )
+        INSTANCE.registerMessage(
+            C2SToolSwapBlockPacket.Handler::class.java,
+            C2SToolSwapBlockPacket::class.java,
+            idGenerator.next(),
+            Side.SERVER
+        )
+        INSTANCE.registerMessage(
+            C2SToolSwapEntityPacket.Handler::class.java,
+            C2SToolSwapEntityPacket::class.java,
             idGenerator.next(),
             Side.SERVER
         )

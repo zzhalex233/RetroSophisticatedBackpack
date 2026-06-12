@@ -241,7 +241,7 @@ retro_sophisticated_backpacks.gui.tool_swapper_any=Swap Any Item
 retro_sophisticated_backpacks.gui.tool_swapper_only_tools=Only Swap Tools
 retro_sophisticated_backpacks.gui.tool_swapper_no_swap=Do Not Auto Swap Tools
 
-# Upstream-aligned tooltips and GUI text
+# Tooltips and GUI text
 item.retro_sophisticated_backpacks.advanced_compacting_upgrade.tooltip=將物品壓縮為對應的壓縮變體\n包括2x2，3x3配方以及更多的過濾選項
 item.retro_sophisticated_backpacks.advanced_deposit_upgrade.tooltip=手持背包 Shift 右擊容器卸載物品\n更多的過濾選項
 item.retro_sophisticated_backpacks.advanced_feeding_upgrade.tooltip=將背包內的食物餵給玩家\n更多的過濾選項

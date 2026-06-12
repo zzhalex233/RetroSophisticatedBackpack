@@ -134,7 +134,7 @@ retro_sophisticated_backpacks.gui.sorting_settings.tooltip=Настройки и
 retro_sophisticated_backpacks.gui.sorting_settings.tooltip_detail=Позволяют задавать слоты для их исключения из сортировки\nОткройте вкладку для дальнейшей настройки
 retro_sophisticated_backpacks.gui.sorting_settings.tooltip_open_detail=Позволяют задавать слоты для их исключения из сортировки\nВыделить все слоты или снять всё выделение = отдельные клавиши\nВыделить слот = нажмите или зажмите ЛКМ\nСнять выделение со слота = нажмите или зажмите ПКМ
 
-# Upstream-aligned tooltips and GUI text
+# Tooltips and GUI text
 item.retro_sophisticated_backpacks.advanced_compacting_upgrade.tooltip=Упаковывает предметы в их сжатые варианты\nПоддерживает рецепты 2×2 и 3×3, а также имеет больше настроек фильтрации
 item.retro_sophisticated_backpacks.advanced_deposit_upgrade.name=Продвинутое улучшение «Разгрузка»
 item.retro_sophisticated_backpacks.advanced_deposit_upgrade.tooltip=Выгружает предметы из рюкзака во внешний инвентарь при нажатии Shift + ПКМ\nИмеет больше настроек фильтрации

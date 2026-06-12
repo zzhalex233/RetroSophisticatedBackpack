@@ -18,7 +18,8 @@ class VoidUpgradeWidget(slotIndex: Int, wrapper: VoidUpgradeWrapper, stack: Item
         wrapper,
         stack,
         wrapper.settingsLangKey,
-        upstreamLayout = true,
+        coveredTabSize = filterTabSize(wrapper.filterItems.slots, wrapper.slotsInRow),
+        width = filterTabWidth(wrapper.slotsInRow),
         contentX = 3,
         contentY = 24,
         contentWidth = wrapper.slotsInRow * 18,
@@ -37,7 +38,7 @@ class VoidUpgradeWidget(slotIndex: Int, wrapper: VoidUpgradeWrapper, stack: Item
 
     private fun createVoidTypeButton(current: VoidType, alwaysEnabled: Boolean): CyclicVariantButtonWidget {
         val voidTypes = allowedVoidTypes(alwaysEnabled)
-        return upstreamButton(voidTypes.map(::voidVariant), voidTypes.indexOf(current).coerceAtLeast(0)) { index ->
+        return tabIconButton(voidTypes.map(::voidVariant), voidTypes.indexOf(current).coerceAtLeast(0)) { index ->
             wrapper.voidType = voidTypes[index]
             slotSyncHandler?.syncToServer(UpgradeSlotSH.UPDATE_VOID_TYPE) {
                 it.writeEnumValue(voidTypes[index])
@@ -52,7 +53,8 @@ class AdvancedVoidUpgradeWidget(slotIndex: Int, wrapper: AdvancedVoidUpgradeWrap
         wrapper,
         stack,
         wrapper.settingsLangKey,
-        upstreamLayout = true,
+        coveredTabSize = filterTabSize(wrapper.filterItems.slots, wrapper.slotsInRow),
+        width = filterTabWidth(wrapper.slotsInRow),
         contentX = 3,
         contentY = 24,
         contentWidth = wrapper.slotsInRow * 18,
@@ -71,7 +73,7 @@ class AdvancedVoidUpgradeWidget(slotIndex: Int, wrapper: AdvancedVoidUpgradeWrap
 
     private fun createVoidTypeButton(current: VoidType, alwaysEnabled: Boolean): CyclicVariantButtonWidget {
         val voidTypes = allowedVoidTypes(alwaysEnabled)
-        return upstreamButton(voidTypes.map(::voidVariant), voidTypes.indexOf(current).coerceAtLeast(0)) { index ->
+        return tabIconButton(voidTypes.map(::voidVariant), voidTypes.indexOf(current).coerceAtLeast(0)) { index ->
             wrapper.voidType = voidTypes[index]
             slotSyncHandler?.syncToServer(UpgradeSlotSH.UPDATE_VOID_TYPE) {
                 it.writeEnumValue(voidTypes[index])
@@ -81,11 +83,11 @@ class AdvancedVoidUpgradeWidget(slotIndex: Int, wrapper: AdvancedVoidUpgradeWrap
 }
 
 internal fun createWorkInGuiButton(shouldWorkInGui: Boolean, toggle: () -> Unit): CyclicVariantButtonWidget =
-    upstreamButton(WORK_IN_GUI_VARIANTS, if (shouldWorkInGui) 1 else 0) {
+    tabIconButton(WORK_IN_GUI_VARIANTS, if (shouldWorkInGui) 1 else 0) {
         toggle()
     }
 
-internal fun upstreamButton(
+internal fun tabIconButton(
     variants: List<CyclicVariantButtonWidget.Variant>,
     index: Int,
     updater: CyclicVariantButtonWidget.(Int) -> Unit

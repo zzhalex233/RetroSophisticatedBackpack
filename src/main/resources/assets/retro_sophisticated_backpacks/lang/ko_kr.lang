@@ -241,7 +241,7 @@ retro_sophisticated_backpacks.gui.tool_swapper_any=Swap Any Item
 retro_sophisticated_backpacks.gui.tool_swapper_only_tools=Only Swap Tools
 retro_sophisticated_backpacks.gui.tool_swapper_no_swap=Do Not Auto Swap Tools
 
-# Upstream-aligned tooltips and GUI text
+# Tooltips and GUI text
 item.retro_sophisticated_backpacks.advanced_compacting_upgrade.tooltip=아이템을 압축할 수 있게 됩니다.\n2x2와 3x3 제작법을 사용할 수 있고, 필터 옵션이 추가됩니다.
 item.retro_sophisticated_backpacks.advanced_deposit_upgrade.tooltip=저장소에다 웅크리고 우클릭하면 배낭의 아이템을 저장소로 꺼낼 수 있게 됩니다.\n필터 옵션이 추가됩니다.
 item.retro_sophisticated_backpacks.advanced_feeding_upgrade.tooltip=플레이어에게 배낭 속 음식을 먹일 수 있게 됩니다.\n설정 옵션이 추가됩니다.

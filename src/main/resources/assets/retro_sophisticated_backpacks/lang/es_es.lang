@@ -134,7 +134,7 @@ retro_sophisticated_backpacks.gui.sorting_settings.tooltip=Configuración de ran
 retro_sophisticated_backpacks.gui.sorting_settings.tooltip_detail=Permite seleccionar ranuras que son ignoradas por el ordenamiento\nAbre la pestaña para modificar la configuración de las ranuras
 retro_sophisticated_backpacks.gui.sorting_settings.tooltip_open_detail=Permite seleccionar ranuras que son ignoradas por el ordenamiento\nSeleccionar todo / Deseleccionar todo = botones\nSeleccionar ranura = clic izquierdo/arrastrar\nDeseleccionar ranura = clic derecho/arrastrar
 
-# Upstream-aligned tooltips and GUI text
+# Tooltips and GUI text
 item.retro_sophisticated_backpacks.advanced_compacting_upgrade.tooltip=Compacta objetos en sus variantes comprimidas\nRecetas 2x2 y 3x3 con más opciones de filtrado
 item.retro_sophisticated_backpacks.advanced_deposit_upgrade.name=Mejora de depósito avanzada
 item.retro_sophisticated_backpacks.advanced_deposit_upgrade.tooltip=Deposita objetos de la mochila en el inventario al que se le hace clic derecho agachado\nTiene más opciones de filtrado

@@ -233,7 +233,7 @@ retro_sophisticated_backpacks.gui.tool_swapper_any=Swap Any Item
 retro_sophisticated_backpacks.gui.tool_swapper_only_tools=Only Swap Tools
 retro_sophisticated_backpacks.gui.tool_swapper_no_swap=Do Not Auto Swap Tools
 
-# Upstream-aligned tooltips and GUI text
+# Tooltips and GUI text
 item.retro_sophisticated_backpacks.advanced_compacting_upgrade.tooltip=圧縮できるアイテムを自動で圧縮します。\n3x3で圧縮するアイテムにも対応。
 item.retro_sophisticated_backpacks.advanced_deposit_upgrade.tooltip=スニークで右クリックしたチェストにアイテムを収納します。\nアイテムフィルタの数が増えます。
 item.retro_sophisticated_backpacks.advanced_feeding_upgrade.tooltip=リュック内の食料を自動で食べます。\n食事のタイミングを指定可能。

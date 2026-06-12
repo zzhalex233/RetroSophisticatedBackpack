@@ -15,7 +15,8 @@ class CompactingUpgradeWidget(slotIndex: Int, wrapper: CompactingUpgradeWrapper,
         wrapper,
         stack,
         wrapper.settingsLangKey,
-        upstreamLayout = true,
+        coveredTabSize = filterTabSize(wrapper.filterItems.slots, wrapper.slotsInRow),
+        width = filterTabWidth(wrapper.slotsInRow),
         contentX = 3,
         contentY = 24,
         contentWidth = wrapper.slotsInRow * 18,
@@ -33,7 +34,7 @@ class CompactingUpgradeWidget(slotIndex: Int, wrapper: CompactingUpgradeWrapper,
     }
 
     private fun createCompactModeButton(compactNonUncraftable: Boolean): CyclicVariantButtonWidget =
-        upstreamButton(COMPACT_MODE_VARIANTS, if (compactNonUncraftable) 1 else 0) {
+        tabIconButton(COMPACT_MODE_VARIANTS, if (compactNonUncraftable) 1 else 0) {
             wrapper.compactNonUncraftable = !wrapper.compactNonUncraftable
             slotSyncHandler?.syncToServer(UpgradeSlotSH.UPDATE_COMPACT_NON_UNCRAFTABLE) {}
         }
@@ -45,7 +46,8 @@ class AdvancedCompactingUpgradeWidget(slotIndex: Int, wrapper: AdvancedCompactin
         wrapper,
         stack,
         wrapper.settingsLangKey,
-        upstreamLayout = true,
+        coveredTabSize = filterTabSize(wrapper.filterItems.slots, wrapper.slotsInRow),
+        width = filterTabWidth(wrapper.slotsInRow),
         contentX = 3,
         contentY = 24,
         contentWidth = wrapper.slotsInRow * 18,
@@ -63,7 +65,7 @@ class AdvancedCompactingUpgradeWidget(slotIndex: Int, wrapper: AdvancedCompactin
     }
 
     private fun createCompactModeButton(compactNonUncraftable: Boolean): CyclicVariantButtonWidget =
-        upstreamButton(COMPACT_MODE_VARIANTS, if (compactNonUncraftable) 1 else 0) {
+        tabIconButton(COMPACT_MODE_VARIANTS, if (compactNonUncraftable) 1 else 0) {
             wrapper.compactNonUncraftable = !wrapper.compactNonUncraftable
             slotSyncHandler?.syncToServer(UpgradeSlotSH.UPDATE_COMPACT_NON_UNCRAFTABLE) {}
         }

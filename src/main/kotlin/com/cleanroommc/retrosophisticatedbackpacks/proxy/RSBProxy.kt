@@ -61,12 +61,18 @@ abstract class RSBProxy {
     class ClientProxy : RSBProxy() {
         companion object {
             private val KEYBINDS: List<KeyBinding> by lazy {
-                listOf(OPEN_BACKPACK_KEYBIND)
+                listOf(OPEN_BACKPACK_KEYBIND, TOOL_SWAP_KEYBIND)
             }
 
             val OPEN_BACKPACK_KEYBIND = KeyBinding(
                 "key.open_backpack.desc".asTranslationKey(),
                 Keyboard.KEY_B,
+                "key.category".asTranslationKey()
+            )
+
+            val TOOL_SWAP_KEYBIND = KeyBinding(
+                "key.tool_swap.desc".asTranslationKey(),
+                Keyboard.KEY_NONE,
                 "key.category".asTranslationKey()
             )
         }

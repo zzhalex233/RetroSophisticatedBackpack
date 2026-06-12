@@ -17,6 +17,7 @@ abstract class ExpandedTabWidget(
     delegatedIcon: IDrawable,
     titleKey: String,
     width: Int = 75,
+    tabHeight: Int = coveredTabSize * 30,
     private val expandDirection: ExpandDirection = ExpandDirection.RIGHT
 ) : ParentWidget<ExpandedTabWidget>() {
     companion object {
@@ -58,12 +59,16 @@ abstract class ExpandedTabWidget(
         }
 
         width(width)
-            .height(coveredTabSize * 30)
+            .height(tabHeight)
             .background(TAB_TEXTURE)
             child(upperTabRow)
     }
 
     abstract fun updateTabState()
+
+    override fun onInit() {
+        context.recipeViewerSettings.addExclusionArea(this)
+    }
 
     override fun dispose() {
         if (isValid)

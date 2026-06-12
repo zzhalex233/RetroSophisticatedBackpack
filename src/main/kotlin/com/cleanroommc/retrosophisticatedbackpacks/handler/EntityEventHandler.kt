@@ -7,7 +7,6 @@ import com.cleanroommc.retrosophisticatedbackpacks.backpack.BackpackInventoryHel
 import com.cleanroommc.retrosophisticatedbackpacks.capability.BackpackWrapper
 import com.cleanroommc.retrosophisticatedbackpacks.capability.Capabilities
 import com.cleanroommc.retrosophisticatedbackpacks.capability.upgrade.EverlastingUpgradeWrapper
-import com.cleanroommc.retrosophisticatedbackpacks.capability.upgrade.IToolSwapperUpgrade
 import com.cleanroommc.retrosophisticatedbackpacks.capability.upgrade.mobcatcher.MobCatcherHandler
 import com.cleanroommc.retrosophisticatedbackpacks.common.gui.PlayerInventoryGuiData
 import com.cleanroommc.retrosophisticatedbackpacks.common.gui.PlayerInventoryGuiFactory
@@ -248,29 +247,6 @@ object EntityEventHandler {
             }
         }
 
-        if (!player.world.isRemote && forEachBackpack(player) { wrapper ->
-                wrapper.gatherCapabilityUpgrades(Capabilities.ITOOL_SWAPPER_UPGRADE_CAPABILITY)
-                    .filterIsInstance<IToolSwapperUpgrade>()
-                    .any { it.onEntityInteract(player, wrapper, entity) }
-            }) {
-            player.inventoryContainer.detectAndSendChanges()
-        }
-    }
-
-    @SubscribeEvent
-    @JvmStatic
-    fun onRightClickBlock(event: PlayerInteractEvent.RightClickBlock) {
-        if (event.world.isRemote) {
-            return
-        }
-        val state = event.world.getBlockState(event.pos)
-        if (forEachBackpack(event.entityPlayer) { wrapper ->
-                wrapper.gatherCapabilityUpgrades(Capabilities.ITOOL_SWAPPER_UPGRADE_CAPABILITY)
-                    .filterIsInstance<IToolSwapperUpgrade>()
-                    .any { it.onBlockInteract(event.entityPlayer, wrapper, event.world, event.pos, state) }
-            }) {
-            event.entityPlayer.inventoryContainer.detectAndSendChanges()
-        }
     }
 
     @SubscribeEvent

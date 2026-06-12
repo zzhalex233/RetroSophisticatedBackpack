@@ -167,6 +167,8 @@ class BackpackPanel(
     var isItemDisplaySettingTabOpened: Boolean = false
     var currentItemDisplaySelectedSlot: Int = -1
         private set
+    internal val isSlotSettingTabOpened: Boolean
+        get() = isMemorySettingTabOpened || isSortingSettingTabOpened || isItemDisplaySettingTabOpened
     private lateinit var backpackSettingTabWidget: TabWidget
     private lateinit var memorySettingTabWidget: TabWidget
     private lateinit var sortingSettingTabWidget: TabWidget
@@ -187,7 +189,6 @@ class BackpackPanel(
 
             field = value
             if (value) {
-                resetTabState()
                 closeUpgradeTabs(syncToServer = true)
                 tabWidgets.forEach { it.isEnabled = false }
                 closeSettingTabs()
@@ -693,21 +694,18 @@ class BackpackPanel(
 
         override fun draw(context: ModularGuiContext, widgetTheme: WidgetThemeEntry<*>) {
             currentTheme = widgetTheme.theme
-        }
-
-        override fun drawForeground(context: ModularGuiContext) {
             if (isSettingMode) {
                 return
             }
             GlStateManager.color(1f, 1f, 1f, 1f)
             val visualWidth = visualWidth()
-            val visualX = area.x + area.width - visualWidth
-            Gui.drawRect(visualX, area.y, visualX + visualWidth, area.y + area.height, 0xFF777777.toInt())
+            val visualX = visualX()
+            Gui.drawRect(visualX, 0, visualX + visualWidth, area.height, 0xFF777777.toInt())
             if (!isFocused() && textField.text.isEmpty()) {
                 RSBTextures.SEARCH_ICON.draw(
                     context,
                     visualX,
-                    area.y,
+                    0,
                     SEARCH_BOX_MIN_WIDTH,
                     SEARCH_BOX_HEIGHT,
                     currentTheme
@@ -716,7 +714,6 @@ class BackpackPanel(
                 drawTextField()
             }
             GlStateManager.color(1f, 1f, 1f, 1f)
-            super.drawForeground(context)
         }
 
         override fun onMousePressed(mouseButton: Int): Interactable.Result {
@@ -777,17 +774,17 @@ class BackpackPanel(
 
         private fun visualX(): Int = area.width - visualWidth()
 
-        override fun textFieldX(): Int = area.x + visualX() + 1
+        override fun textFieldX(): Int = visualX() + 1
 
-        override fun textFieldY(): Int = area.y + 1
+        override fun textFieldY(): Int = 1
 
         override fun textFieldWidth(): Int = visualWidth() - 6
 
         override fun textFieldHeight(): Int = SEARCH_BOX_HEIGHT
 
-        override fun mouseXForTextField(): Int = area.x + context.mouseX
+        override fun mouseXForTextField(): Int = context.mouseX
 
-        override fun mouseYForTextField(): Int = area.y + context.mouseY
+        override fun mouseYForTextField(): Int = context.mouseY
 
         private fun animateWidth() {
             val target = if (isFocused() || textField.text.isNotEmpty()) area.width else SEARCH_BOX_MIN_WIDTH
@@ -813,6 +810,7 @@ class BackpackPanel(
         val inventoryArea = SlotGroupWidget().disableSortButtons()
             .size(inventoryAreaWidth, storageInventoryHeight)
             .pos(STORAGE_INVENTORY_X, STORAGE_INVENTORY_Y)
+            .setEnabledIf { !isSettingMode || isSlotSettingTabOpened }
 
         inventoryArea.child(
             if (inventoryScrollbarWidth > 0) BackpackInventoryScrollWidget(this).pos(0, 0)
@@ -882,7 +880,7 @@ class BackpackPanel(
         val backToBackpackTab = BackToBackpackTabWidget()
             .setEnabledIfAndEnabled({ isSettingMode }, false)
 
-        backpackSettingTabWidget = TabWidget(1).name("backpack_setting_tab")
+        backpackSettingTabWidget = TabWidget(2).name("backpack_setting_tab")
         backpackSettingTabWidget.isEnabled = false
         backpackSettingTabWidget.expandedWidget = BackpackMainSettingsWidget(this, backpackSettingTabWidget)
         backpackSettingTabWidget.tabIcon = RSBTextures.BACKPACK_SETTINGS_ICON
@@ -899,7 +897,7 @@ class BackpackPanel(
                 .pos(RichTooltip.Pos.NEXT_TO_MOUSE)
         }
 
-        sortingSettingTabWidget = TabWidget(2).name("sorting_setting_tab")
+        sortingSettingTabWidget = TabWidget(3).name("sorting_setting_tab")
         sortingSettingTabWidget.isEnabled = false
         sortingSettingTabWidget.expandedWidget = SortingSettingWidget(this, sortingSettingTabWidget)
         sortingSettingTabWidget.tabIcon = RSBTextures.NO_SORT_ICON
@@ -916,7 +914,7 @@ class BackpackPanel(
                 .pos(RichTooltip.Pos.NEXT_TO_MOUSE)
         }
 
-        memorySettingTabWidget = TabWidget(3).name("memory_setting_tab")
+        memorySettingTabWidget = TabWidget(4).name("memory_setting_tab")
         memorySettingTabWidget.isEnabled = false
         memorySettingTabWidget.expandedWidget = MemorySettingWidget(this, memorySettingTabWidget)
         memorySettingTabWidget.tabIcon = RSBTextures.BRAIN_ICON
@@ -933,7 +931,7 @@ class BackpackPanel(
                 .pos(RichTooltip.Pos.NEXT_TO_MOUSE)
         }
 
-        itemDisplaySettingTabWidget = TabWidget(4).name("item_display_setting_tab")
+        itemDisplaySettingTabWidget = TabWidget(5).name("item_display_setting_tab")
         itemDisplaySettingTabWidget.isEnabled = false
         itemDisplaySettingTabWidget.expandedWidget = ItemDisplaySettingsWidget(this, itemDisplaySettingTabWidget)
         itemDisplaySettingTabWidget.tabIcon = RSBTextures.ITEM_DISPLAY_SETTINGS_ICON
@@ -1156,8 +1154,6 @@ class BackpackPanel(
         var tabIndex = 0
         var openedTabIndex: Int? = null
 
-        resetTabState()
-
         for (slotIndex in 0 until backpackWrapper.upgradeSlotsSize()) {
             val stack: ItemStack = backpackWrapper.upgradeItemStackHandler.getStackInSlot(slotIndex)
             val item = stack.item
@@ -1364,7 +1360,7 @@ class BackpackPanel(
                 }
 
                 is AdvancedToolSwapperUpgradeWrapper -> {
-                    upgradeSlotGroup.updateFilterDelegate(wrapper)
+                    upgradeSlotGroup.updateAdvancedFilterDelegate(wrapper)
                     if (updateAndCheckRecreation<AdvancedToolSwapperUpgradeWidget, AdvancedToolSwapperUpgradeWrapper>(
                             tabWidget.expandedWidget,
                             wrapper
@@ -1444,7 +1440,6 @@ class BackpackPanel(
                 }
             }
 
-            tabWidget.expandedWidget?.let { context.recipeViewerSettings.addExclusionArea(it) }
             tabIndex++
             tabDisplayIndex++
         }
@@ -1464,17 +1459,6 @@ class BackpackPanel(
         disableUnusedTabWidgets(tabIndex)
         syncToggles()
         scheduleResize()
-    }
-
-    private fun resetTabState() {
-        if (!isValid)
-            return
-
-        for (tabWidget in tabWidgets) {
-            if (tabWidget.expandedWidget != null) {
-                context.recipeViewerSettings.removeExclusionArea(tabWidget.expandedWidget)
-            }
-        }
     }
 
     private fun disableUnusedTabWidgets(startTabIndex: Int) {

@@ -8,14 +8,19 @@ import com.cleanroommc.retrosophisticatedbackpacks.Tags
 import com.cleanroommc.retrosophisticatedbackpacks.capability.Capabilities
 import com.cleanroommc.retrosophisticatedbackpacks.capability.upgrade.AdvancedRefillUpgradeWrapper
 import com.cleanroommc.retrosophisticatedbackpacks.common.gui.PlayerInventoryGuiData
+import com.cleanroommc.retrosophisticatedbackpacks.item.BackpackItem
 import com.cleanroommc.retrosophisticatedbackpacks.network.C2SOpenBackpackPacket
 import com.cleanroommc.retrosophisticatedbackpacks.network.C2SRefillBlockPickPacket
+import com.cleanroommc.retrosophisticatedbackpacks.network.C2SToolSwapBlockPacket
+import com.cleanroommc.retrosophisticatedbackpacks.network.C2SToolSwapEntityPacket
 import com.cleanroommc.retrosophisticatedbackpacks.proxy.RSBProxy
+import com.cleanroommc.retrosophisticatedbackpacks.util.Utils.asTranslationKey
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.inventory.GuiContainer
 import net.minecraft.inventory.IInventory
 import net.minecraft.item.ItemStack
 import net.minecraft.util.math.RayTraceResult
+import net.minecraft.util.text.TextComponentTranslation
 import net.minecraftforge.fml.common.Mod
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent
 import net.minecraftforge.fml.common.gameevent.InputEvent
@@ -72,6 +77,10 @@ object KeyInputHandler {
             }
         }
 
+        if (RSBProxy.ClientProxy.TOOL_SWAP_KEYBIND.isPressed) {
+            sendToolSwapPacket(mc)
+        }
+
         if (mc.gameSettings.keyBindPickBlock.isPressed) {
             sendRefillBlockPickPacket(mc)
         }
@@ -81,8 +90,26 @@ object KeyInputHandler {
     @JvmStatic
     fun onMouseInput(event: InputEvent.MouseInputEvent) {
         val mc = Minecraft.getMinecraft()
+        if (RSBProxy.ClientProxy.TOOL_SWAP_KEYBIND.isPressed) {
+            sendToolSwapPacket(mc)
+        }
         if (mc.gameSettings.keyBindPickBlock.isPressed) {
             sendRefillBlockPickPacket(mc)
+        }
+    }
+
+    private fun sendToolSwapPacket(mc: Minecraft) {
+        val player = mc.player ?: return
+        val target = mc.objectMouseOver ?: return
+        if (player.heldItemMainhand.item is BackpackItem) {
+            player.sendStatusMessage(TextComponentTranslation("gui.status.unable_to_swap_tool_for_backpack".asTranslationKey()), true)
+            return
+        }
+
+        when (target.typeOfHit) {
+            RayTraceResult.Type.BLOCK -> NetworkHandler.INSTANCE.sendToServer(C2SToolSwapBlockPacket(target.blockPos))
+            RayTraceResult.Type.ENTITY -> target.entityHit?.let { NetworkHandler.INSTANCE.sendToServer(C2SToolSwapEntityPacket(it.entityId)) }
+            else -> Unit
         }
     }
 

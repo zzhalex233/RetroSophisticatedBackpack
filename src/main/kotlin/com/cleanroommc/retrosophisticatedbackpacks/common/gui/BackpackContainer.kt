@@ -101,6 +101,10 @@ class BackpackContainer(
     }
 
     override fun slotClick(slotId: Int, mouseButton: Int, clickTypeIn: ClickType, player: EntityPlayer): ItemStack {
+        if (slotId >= inventorySlots.size) {
+            return ItemStack.EMPTY
+        }
+
         backpackWrapper.isGuiInteractionInProgress = true
         try {
             val playerInventory = player.inventory

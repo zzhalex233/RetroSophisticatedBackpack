@@ -23,6 +23,7 @@ class ItemDisplaySettingsWidget(
     RSBTextures.ITEM_DISPLAY_SETTINGS_ICON,
     "gui.item_display_settings".asTranslationKey(),
     width = 75,
+    tabHeight = 48,
     expandDirection = ExpandDirection.RIGHT
 ) {
     private val rotateButton = DynamicIconButtonWidget({ RSBTextures.ITEM_DISPLAY_ROTATE_ICON })

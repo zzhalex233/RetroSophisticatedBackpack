@@ -179,7 +179,7 @@ retro_sophisticated_backpacks.gui.sorting_settings.tooltip=No Sort Slot Settings
 retro_sophisticated_backpacks.gui.sorting_settings.tooltip_detail=Allows selecting slots that are ignored by sorting\nOpen tab to modify slot settings
 retro_sophisticated_backpacks.gui.sorting_settings.tooltip_open_detail=Allows selecting slots that are ignored by sorting\nSelect all / Unselect all = buttons\nSelect slot = left click/drag\nUnselect slot = right click/drag
 
-# Upstream-aligned tooltips and GUI text
+# Tooltips and GUI text
 item.retro_sophisticated_backpacks.advanced_compacting_upgrade.tooltip=Kompaktuje przedmioty\nzarówno crafting 2x2 jak i 3x3 z większą ilością opcji filtrujących
 item.retro_sophisticated_backpacks.advanced_deposit_upgrade.name=Zaawansowane ulepszenie depozytu
 item.retro_sophisticated_backpacks.advanced_deposit_upgrade.tooltip=Umieszcza przedmioty z plecaka do wybranego inwentarza skradając się i klikając prawy przycisk myszy, trzymając plecak w ręce\nma więcej opcji filtrowania

@@ -17,7 +17,6 @@ class BasicFilterWidget(
     var filterableWrapper: IBasicFilterable,
     slotIndex: Int,
     syncKey: String = "common_filter",
-    private val upstreamLayout: Boolean = false,
     private val showFilterButton: Boolean = true,
     private val slotFactory: (Int, () -> UpgradeSlotSH?) -> PhantomItemSlot = { _, _ -> PhantomItemSlot() }
 ) :
@@ -45,21 +44,17 @@ class BasicFilterWidget(
         filterTypeButton = CyclicVariantButtonWidget(
             if (filterableWrapper is IContentsFilterable) CONTENTS_FILTER_TYPE_VARIANTS else FILTER_TYPE_VARIANTS,
             filterButtonIndex(),
-            iconOffset = if (upstreamLayout) 1 else 2,
-            buttonWidth = if (upstreamLayout) 18 else 20,
-            buttonHeight = if (upstreamLayout) 18 else 20,
-            hasCustomTexture = upstreamLayout
+            iconOffset = 1,
+            buttonWidth = 18,
+            buttonHeight = 18,
+            hasCustomTexture = true
         ) { index ->
             updateFilterType(index)
         }
-            .size(if (upstreamLayout) 18 else 20, if (upstreamLayout) 18 else 20)
+            .size(18, 18)
 
         val slotGroup = SlotGroupWidget().name("${syncKey}s")
-        slotGroup.coverChildren().top(if (showFilterButton) {
-            if (upstreamLayout) 21 else 26
-        } else {
-            0
-        })
+        slotGroup.coverChildren().top(if (showFilterButton) 21 else 0)
         slotGroup.disableSortButtons()
         slotGroup.setEnabledIfAndEnabled {
             (filterableWrapper as? IContentsFilterable)?.contentsFilterType != IContentsFilterable.ContentsFilterType.STORAGE

@@ -35,7 +35,6 @@ class AdvancedFilterWidget(
     slotIndex: Int,
     var filterableWrapper: IAdvancedFilterable,
     syncKey: String = "adv_common_filter",
-    private val upstreamLayout: Boolean = false,
 ) : ParentWidget<AdvancedFilterWidget>() {
     companion object {
         private val FILTER_TYPE_VARIANTS = listOf(
@@ -108,10 +107,10 @@ class AdvancedFilterWidget(
         filterTypeButton = CyclicVariantButtonWidget(
             if (filterableWrapper is IContentsFilterable) CONTENTS_FILTER_TYPE_VARIANTS else FILTER_TYPE_VARIANTS,
             filterButtonIndex(),
-            iconOffset = if (upstreamLayout) 1 else 2,
-            buttonWidth = if (upstreamLayout) 18 else 20,
-            buttonHeight = if (upstreamLayout) 18 else 20,
-            hasCustomTexture = upstreamLayout
+            iconOffset = 1,
+            buttonWidth = 18,
+            buttonHeight = 18,
+            hasCustomTexture = true
         ) { index ->
             updateFilterType(index)
         }
@@ -119,10 +118,10 @@ class AdvancedFilterWidget(
         matchTypeButton = CyclicVariantButtonWidget(
             MATCH_TYPE_VARIANTS,
             filterableWrapper.matchType.ordinal,
-            iconOffset = if (upstreamLayout) 1 else 2,
-            buttonWidth = if (upstreamLayout) 18 else 20,
-            buttonHeight = if (upstreamLayout) 18 else 20,
-            hasCustomTexture = upstreamLayout
+            iconOffset = 1,
+            buttonWidth = 18,
+            buttonHeight = 18,
+            hasCustomTexture = true
         ) {
             filterableWrapper.matchType = IAdvancedFilterable.MatchType.entries[it]
             if (filterableWrapper.matchType == IAdvancedFilterable.MatchType.ORE_DICT) {
@@ -142,10 +141,10 @@ class AdvancedFilterWidget(
         ignoreDurabilityButton = CyclicVariantButtonWidget(
             IGNORE_DURABILITY_VARIANTS,
             if (filterableWrapper.ignoreDurability) 1 else 0,
-            iconOffset = if (upstreamLayout) 1 else 2,
-            buttonWidth = if (upstreamLayout) 18 else 20,
-            buttonHeight = if (upstreamLayout) 18 else 20,
-            hasCustomTexture = upstreamLayout
+            iconOffset = 1,
+            buttonWidth = 18,
+            buttonHeight = 18,
+            hasCustomTexture = true
         ) {
             filterableWrapper.ignoreDurability = it == 1
             updateWrapper()
@@ -155,35 +154,38 @@ class AdvancedFilterWidget(
         ignoreNBTButton = CyclicVariantButtonWidget(
             IGNORE_NBT_VARIANTS,
             if (filterableWrapper.ignoreNBT) 1 else 0,
-            iconOffset = if (upstreamLayout) 1 else 2,
-            buttonWidth = if (upstreamLayout) 18 else 20,
-            buttonHeight = if (upstreamLayout) 18 else 20,
-            hasCustomTexture = upstreamLayout
+            iconOffset = 1,
+            buttonWidth = 18,
+            buttonHeight = 18,
+            hasCustomTexture = true
         ) {
             filterableWrapper.ignoreNBT = it == 1
             updateWrapper()
         }
         ignoreNBTButton.inEffect = inEffect
 
+        val filterSlotCount = filterableWrapper.filterItems.slots
+        val slotsInRow = if (filterSlotCount > 0) filterableWrapper.slotsInRow.coerceIn(1, filterSlotCount) else 1
+        val filterRows = if (filterSlotCount > 0) (filterSlotCount + slotsInRow - 1) / slotsInRow else 1
+        val filterWidth = slotsInRow * 18
+        val filterHeight = filterRows * 18
+
         // Buttons
         val buttonRow = Row()
-            .size(if (upstreamLayout) 72 else 88, if (upstreamLayout) 18 else 20)
-            .childPadding(if (upstreamLayout) 0 else 2)
-        if (!upstreamLayout) {
-            buttonRow.leftRel(0.5f)
-        }
+            .size(filterWidth, 18)
+            .childPadding(0)
 
         val itemBasedConfigButtonRow = Row()
-            .childPadding(if (upstreamLayout) 0 else 2)
-            .size(if (upstreamLayout) 36 else 44, if (upstreamLayout) 18 else 20)
-            .left(if (upstreamLayout) 36 else 44)
+            .childPadding(0)
+            .size(36, 18)
+            .left(36)
             .child(ignoreDurabilityButton)
             .child(ignoreNBTButton)
             .setEnabledIfAndEnabled { filterableWrapper.matchType == IAdvancedFilterable.MatchType.ITEM }
             .name("item_based_button_list")
 
         val addOreDictEntryButton = ButtonWidget()
-            .size(if (upstreamLayout) 18 else 20, if (upstreamLayout) 18 else 20)
+            .size(18, 18)
             .overlay(RSBTextures.ADD_ICON)
             .onMousePressed {
                 val oreName = oreDictTextField.text
@@ -192,7 +194,7 @@ class AdvancedFilterWidget(
                     return@onMousePressed false
 
                 filterableWrapper.oreDictEntries.add(oreName)
-                oreDictList.child(OreDictEntryWidget(this, oreName, 77))
+                oreDictList.child(OreDictEntryWidget(this, oreName, filterWidth - 11))
                 oreDictTextField.text = ""
                 updateWrapper()
                 oreDictList.scheduleResize()
@@ -206,7 +208,7 @@ class AdvancedFilterWidget(
             .name("add_ore_dict_button")
 
         val removeOreDictEntryButton = ButtonWidget()
-            .size(if (upstreamLayout) 18 else 20, if (upstreamLayout) 18 else 20)
+            .size(18, 18)
             .overlay(RSBTextures.REMOVE_ICON)
             .onMousePressed {
                 val focusedOreDictEntry = focusedOreDictEntry
@@ -226,9 +228,9 @@ class AdvancedFilterWidget(
             }
 
         val oreDictBasedConfigButtonRow = Row()
-            .size(if (upstreamLayout) 36 else 44, if (upstreamLayout) 18 else 20)
-            .childPadding(if (upstreamLayout) 0 else 2)
-            .left(if (upstreamLayout) 36 else 44)
+            .size(36, 18)
+            .childPadding(0)
+            .left(36)
             .child(addOreDictEntryButton)
             .child(removeOreDictEntryButton)
             .setEnabledIfAndEnabled { filterableWrapper.matchType == IAdvancedFilterable.MatchType.ORE_DICT }
@@ -244,17 +246,12 @@ class AdvancedFilterWidget(
         // Item-based configuration widgets
         val slotGroup = SlotGroupWidget().name("${syncKey}s")
         slotGroup.coverChildren()
-        if (!upstreamLayout) {
-            slotGroup.leftRel(0.5f)
-        }
         slotGroup.disableSortButtons()
         slotGroup.setEnabledIfAndEnabled {
             (filterableWrapper as? IContentsFilterable)?.contentsFilterType != IContentsFilterable.ContentsFilterType.STORAGE
         }
         filterSlots = mutableListOf<PhantomItemSlot>()
 
-        val filterSlotCount = filterableWrapper.filterItems.slots
-        val slotsInRow = if (filterSlotCount > 0) filterableWrapper.slotsInRow.coerceIn(1, filterSlotCount) else 1
         for (i in 0 until filterSlotCount) {
             val slot =
                 PhantomItemSlot().syncHandler("${syncKey}_$slotIndex", i).pos(i % slotsInRow * 18, i / slotsInRow * 18) as PhantomItemSlot
@@ -264,18 +261,15 @@ class AdvancedFilterWidget(
         }
 
         itemBasedConfigurationGroup = Column()
-            .size(if (upstreamLayout) 72 else 88, 85)
-            .top(if (upstreamLayout) 21 else 24)
+            .size(filterWidth, filterHeight)
+            .top(21)
             .child(slotGroup)
             .setEnabledIfAndEnabled { filterableWrapper.matchType != IAdvancedFilterable.MatchType.ORE_DICT }
             .name("item_based_config_group") as Column
-        if (!upstreamLayout) {
-            itemBasedConfigurationGroup.leftRel(0.5f)
-        }
 
         // Ore-dict-based configuration widgets
         oreDictTextField = TextFieldWidget()
-            .size(88, 15)
+            .size(filterWidth, 15)
             .leftRel(0.5f)
             .bottom(3)
             .tooltipDynamic {
@@ -304,21 +298,18 @@ class AdvancedFilterWidget(
             .tooltipAutoUpdate(true)
 
         oreDictList = OreDictRegexListWidget()
-            .size(82, 65)
+            .size(filterWidth - 6, maxOf(18, filterHeight - 20))
 
         for (entry in filterableWrapper.oreDictEntries)
-            oreDictList.child(OreDictEntryWidget(this, entry, 77))
+            oreDictList.child(OreDictEntryWidget(this, entry, filterWidth - 11))
 
         oreDictBasedConfigurationGroup = Column()
-            .size(88, 85)
-            .top(if (upstreamLayout) 21 else 24)
+            .size(filterWidth, filterHeight)
+            .top(21)
             .child(oreDictList)
             .child(oreDictTextField)
             .setEnabledIfAndEnabled { filterableWrapper.matchType == IAdvancedFilterable.MatchType.ORE_DICT }
             .name("ore_dict_based_config_group") as Column
-        if (!upstreamLayout) {
-            oreDictBasedConfigurationGroup.leftRel(0.5f)
-        }
 
         child(buttonRow)
             .child(itemBasedConfigurationGroup)

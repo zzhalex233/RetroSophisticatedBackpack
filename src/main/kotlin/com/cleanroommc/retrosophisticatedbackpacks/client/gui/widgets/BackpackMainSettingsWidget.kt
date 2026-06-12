@@ -25,7 +25,8 @@ class BackpackMainSettingsWidget(
     3,
     RSBTextures.BACKPACK_SETTINGS_ICON,
     "gui.backpack_settings".asTranslationKey(),
-    width = 93,
+    width = if (Config.allowOpeningOtherPlayerBackpacks) 81 else 75,
+    tabHeight = 70,
     expandDirection = ExpandDirection.RIGHT
 ) {
     private val contextButton = ContextButtonWidget(panel.backpackWrapper)
@@ -50,7 +51,7 @@ class BackpackMainSettingsWidget(
 
     private val shiftClickButton = toggleButton(
         4,
-        52,
+        46,
         { panel.backpackWrapper.shiftClickIntoOpenTab },
         RSBTextures.SHIFT_CLICK_OPEN_TAB_ON,
         RSBTextures.SHIFT_CLICK_OPEN_TAB_OFF,
@@ -59,8 +60,8 @@ class BackpackMainSettingsWidget(
         panel.backpackWrapper::toggleShiftClickIntoOpenTab
     )
     private val keepTabOpenButton = toggleButton(
-        26,
-        52,
+        22,
+        46,
         { panel.backpackWrapper.keepTabOpen },
         RSBTextures.KEEP_TAB_OPEN_ON,
         RSBTextures.KEEP_TAB_OPEN_OFF,
@@ -69,8 +70,8 @@ class BackpackMainSettingsWidget(
         panel.backpackWrapper::toggleKeepTabOpen
     )
     private val keepSearchPhraseButton = toggleButton(
-        48,
-        52,
+        40,
+        46,
         { panel.backpackWrapper.keepSearchPhrase },
         RSBTextures.KEEP_SEARCH_PHRASE_ON,
         RSBTextures.KEEP_SEARCH_PHRASE_OFF,
@@ -79,8 +80,8 @@ class BackpackMainSettingsWidget(
         panel.backpackWrapper::toggleKeepSearchPhrase
     )
     private val otherPlayerButton = toggleButton(
-        70,
-        52,
+        58,
+        46,
         { panel.backpackWrapper.anotherPlayerCanOpen },
         RSBTextures.ANOTHER_PLAYER_CAN_OPEN_ON,
         RSBTextures.ANOTHER_PLAYER_CAN_OPEN_OFF,
@@ -136,7 +137,7 @@ class BackpackMainSettingsWidget(
 
     private class ContextButtonWidget(private val wrapper: BackpackWrapper) : ButtonWidget<ContextButtonWidget>() {
         init {
-            size(84, 18)
+            size(62, 18)
         }
 
         override fun drawBackground(context: ModularGuiContext?, widgetTheme: WidgetThemeEntry<*>?) {
@@ -148,9 +149,7 @@ class BackpackMainSettingsWidget(
             left.draw(context, 0, 0, 16, 18, theme)
             middle.draw(context, 16, 0, 14, 18, theme)
             middle.draw(context, 30, 0, 14, 18, theme)
-            middle.draw(context, 44, 0, 14, 18, theme)
-            middle.draw(context, 58, 0, 14, 18, theme)
-            right.draw(context, 68, 0, 16, 18, theme)
+            right.draw(context, 44, 0, 16, 18, theme)
         }
 
         override fun drawOverlay(context: ModularGuiContext?, widgetTheme: WidgetThemeEntry<*>?) {

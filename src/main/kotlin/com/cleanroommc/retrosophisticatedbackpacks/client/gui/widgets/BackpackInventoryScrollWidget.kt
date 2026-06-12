@@ -38,7 +38,7 @@ class BackpackInventoryScrollWidget(panel: BackpackPanel) :
     }
 
     companion object {
-        const val SCROLLBAR_WIDTH = 4
+        const val SCROLLBAR_WIDTH = 6
         private const val SLOT_SIZE = 18
 
         fun createSlots(panel: BackpackPanel, visibleRows: Int): SlotGroupWidget {

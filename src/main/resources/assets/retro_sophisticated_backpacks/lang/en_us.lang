@@ -31,6 +31,7 @@ itemGroup.retro_sophisticated_backpacks.creative_tab=Retro Sophisticated Backpac
 
 # Keybinds
 retro_sophisticated_backpacks.key.open_backpack.desc=Opens Backpack in Inventory
+retro_sophisticated_backpacks.key.tool_swap.desc=Swap Tool Based on Current Block/Entity
 retro_sophisticated_backpacks.key.category=Retro Sophisticated Backpacks
 
 # Tooltips
@@ -283,10 +284,19 @@ retro_sophisticated_backpacks.gui.jukebox_repeat_all=Repeat All
 retro_sophisticated_backpacks.gui.jukebox_repeat_one=Repeat One
 retro_sophisticated_backpacks.gui.jukebox_repeat_no=Repeat Disabled
 retro_sophisticated_backpacks.gui.tool_swapper_swap_weapon_disabled=Do Not Swap Weapons
+retro_sophisticated_backpacks.gui.tool_swapper_swap_weapon_disabled.detail=Keeps the held item when attacking entities
 retro_sophisticated_backpacks.gui.tool_swapper_swap_weapon_enabled=Swap Weapons
-retro_sophisticated_backpacks.gui.tool_swapper_any=Swap Any Item
-retro_sophisticated_backpacks.gui.tool_swapper_only_tools=Only Swap Tools
-retro_sophisticated_backpacks.gui.tool_swapper_no_swap=Do Not Auto Swap Tools
+retro_sophisticated_backpacks.gui.tool_swapper_swap_weapon_enabled.detail=Swaps to the best weapon when attacking entities
+retro_sophisticated_backpacks.gui.tool_swapper_any=Swap Tools
+retro_sophisticated_backpacks.gui.tool_swapper_any.detail=Swaps an appropriate tool into hand when holding a weapon or another tool
+retro_sophisticated_backpacks.gui.tool_swapper_only_tools=Only Swap For Other Tools
+retro_sophisticated_backpacks.gui.tool_swapper_only_tools.detail=Swaps only when holding another tool, not when holding a weapon
+retro_sophisticated_backpacks.gui.tool_swapper_no_swap=Do Not Swap Tools
+retro_sophisticated_backpacks.gui.tool_swapper_no_swap.detail=Tools are never swapped into hand
+retro_sophisticated_backpacks.gui.status.unable_to_swap_tool_for_backpack=Unable to swap tool with backpack in hand. Switch to a different item or empty hand.
+retro_sophisticated_backpacks.gui.status.no_tool_found_for_block=No tool found that works on block
+retro_sophisticated_backpacks.gui.status.no_tool_found_for_entity=No tool found that works on entity
+retro_sophisticated_backpacks.gui.status.no_tool_swap_upgrade_present=No upgrade present that can swap tools on key press
 retro_sophisticated_backpacks.gui.mob_catcher.click_to_release=Click to release
 retro_sophisticated_backpacks.gui.status.mob_catcher_contains_mobs=Release captured mobs before removing Mob Catcher Upgrade
 retro_sophisticated_backpacks.gui.status.mob_catcher_mobs_need_advanced=Captured mobs require Advanced Mob Catcher Upgrade
@@ -307,7 +317,7 @@ retro_sophisticated_backpacks.gui.status.mob_catcher_no_space=No empty %sx%s slo
 retro_sophisticated_backpacks.gui.status.mob_catcher_release_failed=Could not release mob there
 retro_sophisticated_backpacks.gui.status.mob_catcher_no_release_space=No valid release space there
 
-# Upstream-aligned tooltips and GUI text
+# Tooltips and GUI text
 item.retro_sophisticated_backpacks.advanced_compacting_upgrade.tooltip=Compacts items into their compressed variants\nBoth 2x2 and 3x3 recipes with more filtering options
 item.retro_sophisticated_backpacks.advanced_deposit_upgrade.tooltip=Deposits items from backpack into sneak right clicked inventory\nHas more filtering options
 item.retro_sophisticated_backpacks.advanced_feeding_upgrade.tooltip=Feeds player with food from backpack's inventory\nMore options for when food gets fed to player
@@ -319,7 +329,7 @@ item.retro_sophisticated_backpacks.advanced_pickup_upgrade.tooltip=Makes backpac
 item.retro_sophisticated_backpacks.advanced_pump_upgrade.tooltip=Pumps Fluids between Tank upgrade and adjacent blocks\nWorks with fluid containers in hand and fluid blocks in world\nAllows to filter which fluids are pumped
 item.retro_sophisticated_backpacks.advanced_refill_upgrade.tooltip=Keeps refilling stack of selected items in player's inventory\nAllows for more precise target slot selection\nAlso allows middle click picking blocks from backpack
 item.retro_sophisticated_backpacks.advanced_restock_upgrade.tooltip=Restocks backpack from sneak right clicked inventory\nHas more filtering options
-item.retro_sophisticated_backpacks.advanced_tool_swapper_upgrade.tooltip=Automatically swaps item in player's hand for the one effective on the block/entity when left clicked\nHas filter options and extra interaction support
+item.retro_sophisticated_backpacks.advanced_tool_swapper_upgrade.tooltip=Automatically swaps item in player's hand for the one effective on the block/entity when left clicked\nHas filter options and supports manual swaps with the Tool Swap key
 item.retro_sophisticated_backpacks.advanced_void_upgrade.tooltip=Voids items selected in filter\nHas more filtering options
 item.retro_sophisticated_backpacks.anvil_upgrade.tooltip=Anvil in an upgrade tab
 item.retro_sophisticated_backpacks.battery_upgrade.tooltip=Replaces part of backpack's inventory with energy storage

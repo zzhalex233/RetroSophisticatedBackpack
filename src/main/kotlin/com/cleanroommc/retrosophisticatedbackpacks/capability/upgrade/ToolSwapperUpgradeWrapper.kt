@@ -12,36 +12,59 @@ import net.minecraft.block.material.Material
 import net.minecraft.block.state.IBlockState
 import net.minecraft.entity.Entity
 import net.minecraft.entity.SharedMonsterAttributes
+import net.minecraft.entity.passive.EntityAnimal
+import net.minecraft.entity.passive.EntityCow
 import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.init.Blocks
+import net.minecraft.init.Items
 import net.minecraft.item.ItemAxe
+import net.minecraft.item.ItemHoe
+import net.minecraft.item.ItemPickaxe
+import net.minecraft.item.ItemSpade
 import net.minecraft.item.ItemShears
 import net.minecraft.item.ItemStack
 import net.minecraft.item.ItemSword
 import net.minecraft.nbt.NBTTagCompound
+import net.minecraft.nbt.NBTTagList
+import net.minecraft.nbt.NBTTagString
 import net.minecraft.util.EnumFacing
+import net.minecraft.util.EnumHand
 import net.minecraft.util.math.BlockPos
 import net.minecraft.world.World
 import net.minecraftforge.common.IShearable
 import net.minecraftforge.common.capabilities.Capability
+import net.minecraftforge.common.util.Constants
 import java.util.LinkedList
 
 open class ToolSwapperUpgradeWrapper(
     private val hasSettingsTab: Boolean = false,
     private val swapToolOnKeyPress: Boolean = false,
 ) : BasicUpgradeWrapper<ToolSwapperUpgradeItem>(Config.toolSwapperUpgrade.filterSlots, Config.toolSwapperUpgrade.slotsInRow),
-    IToolSwapperUpgrade {
+    IToolSwapperUpgrade, IAdvancedFilterable {
     companion object {
         private const val SHOULD_SWAP_WEAPON_TAG = "ShouldSwapWeapon"
         private const val TOOL_SWAP_MODE_TAG = "ToolSwapMode"
     }
 
+    protected open val exposesAdvancedFilter = false
     override val settingsLangKey = "gui.tool_swapper_settings".asTranslationKey()
     var shouldSwapWeapon = true
     var toolSwapMode = ToolSwapMode.ANY
+    override var matchType = IAdvancedFilterable.MatchType.ITEM
+    override var oreDictEntries = mutableListOf<String>()
+    override var ignoreDurability = true
+    override var ignoreNBT = true
     private var lastMinedBlock: Block = Blocks.AIR
     private var toolCacheFor: String? = null
     private val toolCache = LinkedList<ItemStack>()
+
+    init {
+        filterType = IBasicFilterable.FilterType.BLACKLIST
+    }
+
+    override fun checkFilter(stack: ItemStack): Boolean =
+        if (exposesAdvancedFilter) enabled && super<IAdvancedFilterable>.checkFilter(stack)
+        else super<BasicUpgradeWrapper>.checkFilter(stack)
 
     override fun onBlockClick(player: EntityPlayer, wrapper: BackpackWrapper, pos: BlockPos, state: IBlockState): Boolean {
         if (!enabled || player.isCreative || player.isSpectator || toolSwapMode == ToolSwapMode.NO_SWAP || state.material == Material.AIR) {
@@ -49,7 +72,7 @@ open class ToolSwapperUpgradeWrapper(
         }
 
         val held = player.heldItemMainhand
-        if (held.item is BackpackItem || (toolSwapMode == ToolSwapMode.ONLY_TOOLS && isWeapon(held, player)) || (!isWeapon(held, player) && isNotTool(held)) || !matchesAllowEmpty(held)) {
+        if (held.item is BackpackItem || (toolSwapMode == ToolSwapMode.ONLY_TOOLS && isSword(held)) || (!isSword(held) && isNotTool(held)) || !matchesAllowEmpty(held)) {
             return false
         }
 
@@ -70,25 +93,29 @@ open class ToolSwapperUpgradeWrapper(
         }
 
         val held = player.heldItemMainhand
-        if (isWeapon(held, player)) {
+        if (isSword(held)) {
             return true
         }
         if (held.item is BackpackItem || isNotTool(held) || !matchesAllowEmpty(held)) {
             return false
         }
 
-        val selectedSlot = findBestWeaponSlot(wrapper, player) ?: return false
+        val selectedSlot = findBestWeaponSlot(wrapper, player, held) ?: return false
         return swapMainHandWithBackpackSlot(player, wrapper, selectedSlot)
     }
+
+    override fun canProcessBlockInteract(): Boolean = swapToolOnKeyPress
 
     override fun onBlockInteract(player: EntityPlayer, wrapper: BackpackWrapper, world: World, pos: BlockPos, state: IBlockState): Boolean {
         if (!enabled || !swapToolOnKeyPress || player.heldItemMainhand.item is BackpackItem) {
             return false
         }
         return tryToSwapTool(player, wrapper, state.block.registryName?.toString()) {
-            itemWorksOnBlock(world, pos, state, player, it)
+            itemWorksOnBlock(world, pos, state, it)
         }
     }
+
+    override fun canProcessEntityInteract(): Boolean = swapToolOnKeyPress
 
     override fun onEntityInteract(player: EntityPlayer, wrapper: BackpackWrapper, entity: Entity): Boolean {
         if (!enabled || !swapToolOnKeyPress || player.heldItemMainhand.item is BackpackItem) {
@@ -102,11 +129,17 @@ open class ToolSwapperUpgradeWrapper(
         var bestSpeed = heldSpeed
         for (slot in 0 until wrapper.slots) {
             val stack = wrapper.getStackInSlot(slot)
-            if (stack.isEmpty || !matchesAllowEmpty(stack) || !isGoodAtBreaking(player, pos, state, stack)) {
+            if (stack.isEmpty || !matchesAllowEmpty(stack)) {
                 continue
             }
+            if (!canHarvestDropsWith(state, stack)) continue
+            val destroyProgress = getDestroyProgressWith(player, pos, state, stack)
             val speed = stack.getDestroySpeed(state)
-            if (speed > bestSpeed || state.getPlayerRelativeBlockHardness(player, player.world, pos) >= 1f) {
+            if (speed <= 1.5f && destroyProgress < 1f) continue
+            if (destroyProgress >= 1f) {
+                return slot
+            }
+            if (speed > bestSpeed) {
                 bestSpeed = speed
                 bestSlot = slot
             }
@@ -114,21 +147,28 @@ open class ToolSwapperUpgradeWrapper(
         return bestSlot
     }
 
-    private fun findBestWeaponSlot(wrapper: BackpackWrapper, player: EntityPlayer): Int? {
-        var bestSlot: Int? = null
-        var bestDamage = getAttackDamage(player.heldItemMainhand, player)
+    private fun findBestWeaponSlot(wrapper: BackpackWrapper, player: EntityPlayer, held: ItemStack): Int? {
+        var bestSwordSlot: Int? = null
+        var bestSwordDamage = if (isSword(held)) getAttackDamage(held, player) else 0.0
+        var bestAxeSlot: Int? = null
+        var bestAxeDamage = if (isAxe(held)) getAttackDamage(held, player) else 0.0
         for (slot in 0 until wrapper.slots) {
             val stack = wrapper.getStackInSlot(slot)
-            if (stack.isEmpty || !matchesAllowEmpty(stack) || !isWeapon(stack, player)) {
+            if (stack.isEmpty || !matchesAllowEmpty(stack)) {
                 continue
             }
             val damage = getAttackDamage(stack, player)
-            if (damage > bestDamage) {
-                bestDamage = damage
-                bestSlot = slot
+            if (isSword(stack)) {
+                if (damage > bestSwordDamage) {
+                    bestSwordDamage = damage
+                    bestSwordSlot = slot
+                }
+            } else if (isAxe(stack) && damage > bestAxeDamage) {
+                bestAxeDamage = damage
+                bestAxeSlot = slot
             }
         }
-        return bestSlot
+        return bestSwordSlot ?: bestAxeSlot
     }
 
     private fun tryToSwapTool(
@@ -192,27 +232,61 @@ open class ToolSwapperUpgradeWrapper(
 
     private fun swapMainHandWithBackpackSlot(player: EntityPlayer, wrapper: BackpackWrapper, slot: Int): Boolean {
         val held = player.heldItemMainhand
+        val selectedStack = wrapper.getStackInSlot(slot)
         val tool = wrapper.extractItem(slot, 1, true)
-        if (tool.isEmpty || (!held.isEmpty && !wrapper.insertStack(held.copy(), true).isEmpty && tool.count != 1)) {
+        if (tool.isEmpty) {
             return false
         }
+        val canStoreHeld = held.isEmpty ||
+                wrapper.insertStack(held.copy(), true).isEmpty ||
+                (selectedStack.count == 1 && wrapper.backpackItemStackHandler.isItemValid(slot, held))
+        if (!canStoreHeld) return false
 
-        player.setHeldItem(net.minecraft.util.EnumHand.MAIN_HAND, wrapper.extractItem(slot, 1, false))
+        val extractedTool = wrapper.extractItem(slot, 1, false)
+        if (extractedTool.isEmpty) return false
+
+        player.setHeldItem(EnumHand.MAIN_HAND, extractedTool)
+        player.inventoryContainer.detectAndSendChanges()
         if (!held.isEmpty) {
-            wrapper.insertStack(held.copy(), false)
+            val remaining = wrapper.insertStack(held.copy(), false)
+            if (!remaining.isEmpty) {
+                wrapper.insertItem(slot, remaining, false)
+            }
         }
         return true
     }
 
     private fun isGoodAtBreaking(player: EntityPlayer, pos: BlockPos, state: IBlockState, stack: ItemStack): Boolean =
-        stack.getDestroySpeed(state) > 1.5f || state.getPlayerRelativeBlockHardness(player, player.world, pos) >= 1f
+        canHarvestDropsWith(state, stack) && (stack.getDestroySpeed(state) > 1.5f || getDestroyProgressWith(player, pos, state, stack) >= 1f)
+
+    private fun canHarvestDropsWith(state: IBlockState, stack: ItemStack): Boolean =
+        state.material.isToolNotRequired || stack.canHarvestBlock(state)
+
+    private fun getDestroyProgressWith(player: EntityPlayer, pos: BlockPos, state: IBlockState, stack: ItemStack): Float {
+        val held = player.heldItemMainhand
+        player.setHeldItem(EnumHand.MAIN_HAND, stack)
+        return try {
+            state.getPlayerRelativeBlockHardness(player, player.world, pos)
+        } finally {
+            player.setHeldItem(EnumHand.MAIN_HAND, held)
+        }
+    }
 
     private fun isNotTool(stack: ItemStack): Boolean =
-        stack.isEmpty || stack.getDestroySpeed(Blocks.STONE.defaultState) <= 1f && stack.getDestroySpeed(Blocks.DIRT.defaultState) <= 1f &&
-                stack.getDestroySpeed(Blocks.LOG.defaultState) <= 1f && stack.item !is ItemShears && stack.item !is ItemAxe
+        stack.isEmpty || !isTool(stack)
 
-    private fun isWeapon(stack: ItemStack, player: EntityPlayer): Boolean =
-        stack.item is ItemSword || getAttackDamage(stack, player) > getAttackDamage(ItemStack.EMPTY, player)
+    private fun isTool(stack: ItemStack): Boolean =
+        stack.item is ItemAxe || stack.item is ItemHoe || stack.item is ItemPickaxe || stack.item is ItemSpade ||
+                stack.item is ItemShears || stack.item.getToolClasses(stack).isNotEmpty() ||
+                stack.getDestroySpeed(Blocks.STONE.defaultState) > 1f ||
+                stack.getDestroySpeed(Blocks.DIRT.defaultState) > 1f ||
+                stack.getDestroySpeed(Blocks.LOG.defaultState) > 1f
+
+    private fun isSword(stack: ItemStack): Boolean =
+        stack.item is ItemSword
+
+    private fun isAxe(stack: ItemStack): Boolean =
+        stack.item is ItemAxe || "axe" in stack.item.getToolClasses(stack)
 
     private fun getAttackDamage(stack: ItemStack, player: EntityPlayer): Double {
         if (stack.isEmpty) {
@@ -224,31 +298,69 @@ open class ToolSwapperUpgradeWrapper(
         return damage
     }
 
-    private fun itemWorksOnBlock(world: World, pos: BlockPos, state: IBlockState, player: EntityPlayer, stack: ItemStack): Boolean {
+    private fun itemWorksOnBlock(world: World, pos: BlockPos, state: IBlockState, stack: ItemStack): Boolean {
         if (stack.item is ItemShears && state.block is IShearable) {
             return (state.block as IShearable).isShearable(stack, world, pos)
         }
-        return isGoodAtBreaking(player, pos, state, stack)
+        if (stack.item is ItemSpade && state.block == Blocks.GRASS && world.isAirBlock(pos.up())) {
+            return true
+        }
+        val harvestTool = state.block.getHarvestTool(state)
+        return harvestTool != null && harvestTool in stack.item.getToolClasses(stack)
     }
 
     private fun itemWorksOnEntity(entity: Entity, stack: ItemStack): Boolean =
-        stack.item is ItemShears && entity is IShearable && entity.isShearable(stack, entity.world, entity.position)
+        stack.item is ItemShears && entity is IShearable && entity.isShearable(stack, entity.world, entity.position) ||
+                entity is EntityCow && stack.item == Items.BUCKET ||
+                entity is EntityAnimal && stack.item == Items.LEAD
 
     override fun serializeNBT(): NBTTagCompound {
         val nbt = super.serializeNBT()
         nbt.setBoolean(SHOULD_SWAP_WEAPON_TAG, shouldSwapWeapon)
         nbt.setByte(TOOL_SWAP_MODE_TAG, toolSwapMode.ordinal.toByte())
+        if (exposesAdvancedFilter) {
+            nbt.setByte(IAdvancedFilterable.MATCH_TYPE_TAG, matchType.ordinal.toByte())
+            nbt.setBoolean(IAdvancedFilterable.IGNORE_DURABILITY_TAG, ignoreDurability)
+            nbt.setBoolean(IAdvancedFilterable.IGNORE_NBT_TAG, ignoreNBT)
+            val oreDictList = NBTTagList()
+            for (entry in oreDictEntries) {
+                oreDictList.appendTag(NBTTagString(entry))
+            }
+            nbt.setTag(IAdvancedFilterable.ORE_DICT_LIST_TAG, oreDictList)
+        }
         return nbt
     }
 
     override fun deserializeNBT(nbt: NBTTagCompound) {
         super.deserializeNBT(nbt)
+        if (filterItems.inventory.all(ItemStack::isEmpty) && filterType == IBasicFilterable.FilterType.WHITELIST) {
+            filterType = IBasicFilterable.FilterType.BLACKLIST
+        }
         shouldSwapWeapon = !nbt.hasKey(SHOULD_SWAP_WEAPON_TAG) || nbt.getBoolean(SHOULD_SWAP_WEAPON_TAG)
-        toolSwapMode = ToolSwapMode.entries.getOrElse(nbt.getByte(TOOL_SWAP_MODE_TAG).toInt()) { ToolSwapMode.ANY }
+        if (nbt.hasKey(TOOL_SWAP_MODE_TAG)) {
+            toolSwapMode = ToolSwapMode.entries.getOrElse(nbt.getByte(TOOL_SWAP_MODE_TAG).toInt()) { ToolSwapMode.ANY }
+        }
+        if (nbt.hasKey(IAdvancedFilterable.MATCH_TYPE_TAG)) {
+            matchType = IAdvancedFilterable.MatchType.entries.getOrElse(nbt.getByte(IAdvancedFilterable.MATCH_TYPE_TAG).toInt()) { matchType }
+        }
+        if (nbt.hasKey(IAdvancedFilterable.IGNORE_DURABILITY_TAG)) {
+            ignoreDurability = nbt.getBoolean(IAdvancedFilterable.IGNORE_DURABILITY_TAG)
+        }
+        if (nbt.hasKey(IAdvancedFilterable.IGNORE_NBT_TAG)) {
+            ignoreNBT = nbt.getBoolean(IAdvancedFilterable.IGNORE_NBT_TAG)
+        }
+        if (nbt.hasKey(IAdvancedFilterable.ORE_DICT_LIST_TAG)) {
+            val oreDictList = nbt.getTagList(IAdvancedFilterable.ORE_DICT_LIST_TAG, Constants.NBT.TAG_STRING)
+            oreDictEntries.clear()
+            for (stringNBT in oreDictList) {
+                oreDictEntries.add((stringNBT as NBTTagString).string)
+            }
+        }
     }
 
     override fun hasCapability(capability: Capability<*>, facing: EnumFacing?): Boolean =
         capability == Capabilities.TOOL_SWAPPER_UPGRADE_CAPABILITY ||
+                exposesAdvancedFilter && capability == Capabilities.ADVANCED_FILTERABLE_CAPABILITY ||
                 capability == Capabilities.ITOOL_SWAPPER_UPGRADE_CAPABILITY ||
                 super<BasicUpgradeWrapper>.hasCapability(capability, facing)
 
@@ -256,6 +368,7 @@ open class ToolSwapperUpgradeWrapper(
 }
 
 class AdvancedToolSwapperUpgradeWrapper : ToolSwapperUpgradeWrapper(true, true) {
+    override val exposesAdvancedFilter = true
     override val settingsLangKey = "gui.advanced_tool_swapper_settings".asTranslationKey()
 
     override fun hasCapability(capability: Capability<*>, facing: EnumFacing?): Boolean =

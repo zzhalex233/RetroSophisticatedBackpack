@@ -20,7 +20,7 @@ class TabWidget(
     SingleChildWidget<TabWidget>(), Interactable {
     companion object {
         val TAB_TEXTURE: TabTexture = GuiTextures.TAB_RIGHT
-        const val TAB_TOP_OFFSET = 4
+        const val TAB_TOP_OFFSET = 0
         const val TAB_VERTICAL_SPACE = 1
     }
 

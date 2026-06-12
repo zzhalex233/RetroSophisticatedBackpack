@@ -18,6 +18,7 @@ class SortingSettingWidget(
     RSBTextures.NO_SORT_ICON,
     "gui.sorting_settings".asTranslationKey(),
     width = 75,
+    tabHeight = 48,
     expandDirection = ExpandDirection.RIGHT
 ) {
     private val lockAllButton: ButtonWidget<*> = ButtonWidget()

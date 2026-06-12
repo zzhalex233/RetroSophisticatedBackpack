@@ -264,7 +264,7 @@ class BackpackWrapper(
 
     fun onSlotChanged(slotIndex: Int, fromGui: Boolean = false) {
         val stack = getStackInSlot(slotIndex)
-        if (!fromGui || shouldVoidInGui(stack)) {
+        if (!fromGui || shouldVoidInGui(slotIndex, stack)) {
             slotsToVoid.add(slotIndex)
         }
         if (!fromGui || shouldCompactInGui()) {
@@ -364,7 +364,7 @@ class BackpackWrapper(
         if (slotsToVoid.isNotEmpty()) {
             for (slot in slotsToVoid.toSet()) {
                 val stack = getStackInSlot(slot)
-                if (!stack.isEmpty && shouldVoidInGui(stack)) {
+                if (!stack.isEmpty && shouldVoidInGui(slot, stack)) {
                     extractItem(slot, stack.count, false)
                 }
             }
@@ -538,11 +538,11 @@ class BackpackWrapper(
         }
     }
 
-    private fun shouldVoidInGui(stack: ItemStack): Boolean =
+    private fun shouldVoidInGui(slotIndex: Int, stack: ItemStack): Boolean =
         gatherCapabilityUpgrades(Capabilities.IVOID_UPGRADE_CAPABILITY).any {
             when (it) {
-                is VoidUpgradeWrapper -> it.shouldWorkInGui && it.shouldVoid(stack)
-                is AdvancedVoidUpgradeWrapper -> it.shouldWorkInGui && it.shouldVoid(stack)
+                is VoidUpgradeWrapper -> it.shouldWorkInGui && it.shouldVoidOverflow(stack, false, hasMatchingStack(slotIndex, stack))
+                is AdvancedVoidUpgradeWrapper -> it.shouldWorkInGui && it.shouldVoidOverflow(stack, false, hasMatchingStack(slotIndex, stack))
                 else -> false
             }
         }
@@ -558,6 +558,10 @@ class BackpackWrapper(
 
     private fun hasMatchingStack(stack: ItemStack): Boolean =
         backpackItemStackHandler.inventory.any { !it.isEmpty && ItemHandlerHelper.canItemStacksStack(it, stack) }
+
+    private fun hasMatchingStack(changedSlot: Int, stack: ItemStack): Boolean =
+        backpackItemStackHandler.inventory.withIndex()
+            .any { (slot, storedStack) -> slot != changedSlot && !storedStack.isEmpty && ItemHandlerHelper.canItemStacksStack(storedStack, stack) }
 
     fun matchesStorageContents(stack: ItemStack, matcher: (ItemStack, ItemStack) -> Boolean): Boolean =
         (0 until slots).any {

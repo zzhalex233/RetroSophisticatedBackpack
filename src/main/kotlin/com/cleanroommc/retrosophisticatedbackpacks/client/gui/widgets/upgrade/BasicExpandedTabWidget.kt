@@ -16,7 +16,6 @@ open class BasicExpandedTabWidget<T>(
     filterSyncKey: String = "common_filter",
     coveredTabSize: Int = 4,
     width: Int = 75,
-    upstreamLayout: Boolean = false,
     contentX: Int = 8,
     contentY: Int = 28,
     contentWidth: Int = 64,
@@ -29,7 +28,7 @@ open class BasicExpandedTabWidget<T>(
     protected val startingRow: Row = Row()
         .height(0)
         .name("starting_row") as Row
-    protected val filterWidget: BasicFilterWidget = BasicFilterWidget(wrap, slotIndex, filterSyncKey, upstreamLayout, showFilterButton, slotFactory)
+    protected val filterWidget: BasicFilterWidget = BasicFilterWidget(wrap, slotIndex, filterSyncKey, showFilterButton, slotFactory)
         .width(filterWidth)
         .coverChildrenHeight()
         .name("filter_widget")
@@ -49,4 +48,14 @@ open class BasicExpandedTabWidget<T>(
 
         child(column)
     }
+}
+
+internal fun filterTabWidth(slotsInRow: Int): Int =
+    maxOf(75, 3 + slotsInRow.coerceAtLeast(1) * 18 + 6)
+
+internal fun filterTabSize(filterSlots: Int, slotsInRow: Int, hasTopButtonRow: Boolean = true, hasFilterButtonRow: Boolean = true): Int {
+    val columns = slotsInRow.coerceAtLeast(1)
+    val rows = ((filterSlots.coerceAtLeast(1) + columns - 1) / columns).coerceAtLeast(1)
+    val bottom = 24 + (if (hasTopButtonRow) 20 else 0) + (if (hasFilterButtonRow) 21 else 0) + rows * 18 + 6
+    return ((bottom + 29) / 30).coerceAtLeast(3)
 }

@@ -14,7 +14,6 @@ open class AdvancedExpandedTabWidget<T>(
     filterSyncKey: String = "adv_common_filter",
     coveredTabSize: Int = 5,
     width: Int = 100,
-    upstreamLayout: Boolean = false,
     contentX: Int = 8,
     contentY: Int = 28,
     contentWidth: Int = 88,
@@ -25,7 +24,7 @@ open class AdvancedExpandedTabWidget<T>(
     protected val startingRow: Row = Row()
         .height(0)
         .name("starting_row") as Row
-    protected val filterWidget: AdvancedFilterWidget = AdvancedFilterWidget(slotIndex, wrap, filterSyncKey, upstreamLayout)
+    protected val filterWidget: AdvancedFilterWidget = AdvancedFilterWidget(slotIndex, wrap, filterSyncKey)
         .width(filterWidth)
         .coverChildrenHeight()
         .name("adv_filter_widget")

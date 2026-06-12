@@ -16,7 +16,9 @@ import net.minecraftforge.common.util.INBTSerializable
 interface IToolSwapperUpgrade : ISidelessCapabilityProvider, INBTSerializable<NBTTagCompound> {
     fun onBlockClick(player: EntityPlayer, wrapper: BackpackWrapper, pos: BlockPos, state: IBlockState): Boolean = false
     fun onAttackEntity(player: EntityPlayer, wrapper: BackpackWrapper): Boolean = false
+    fun canProcessBlockInteract(): Boolean = false
     fun onBlockInteract(player: EntityPlayer, wrapper: BackpackWrapper, world: World, pos: BlockPos, state: IBlockState): Boolean = false
+    fun canProcessEntityInteract(): Boolean = false
     fun onEntityInteract(player: EntityPlayer, wrapper: BackpackWrapper, entity: Entity): Boolean = false
 
     override fun hasCapability(capability: Capability<*>, facing: EnumFacing?): Boolean =

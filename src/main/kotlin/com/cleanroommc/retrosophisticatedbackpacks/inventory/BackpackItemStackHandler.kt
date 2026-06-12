@@ -23,6 +23,11 @@ class BackpackItemStackHandler(size: Int, private val wrapper: BackpackWrapper) 
     override fun getStackLimit(slotIndex: Int, stack: ItemStack): Int =
         wrapper.getStackLimit(stack)
 
+    override fun setStackInSlot(slot: Int, stack: ItemStack) {
+        super.setStackInSlot(slot, stack)
+        if (wrapper.shouldHandleSlotChangeFromGui()) wrapper.onGuiSlotChanged(slot)
+    }
+
     /**
      * Prioritize insertion by tries inserting on memorized slot first.
      *

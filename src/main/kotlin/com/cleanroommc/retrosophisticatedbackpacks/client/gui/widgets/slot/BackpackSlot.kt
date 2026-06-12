@@ -227,7 +227,8 @@ class BackpackSlot(private val panel: BackpackPanel, private val wrapper: Backpa
             val widgetTheme = widgetThemeEntry?.theme ?: WidgetTheme.getDefault().theme
 
             if (isInSettingMode) {
-                drawSettingStack(context, widgetTheme)
+                if (panel.isSlotSettingTabOpened)
+                    drawSettingStack(context, widgetTheme)
                 drawSettingOverlays(it, widgetTheme)
             } else {
                 val slot = slot as? ModularBackpackSlot ?: return

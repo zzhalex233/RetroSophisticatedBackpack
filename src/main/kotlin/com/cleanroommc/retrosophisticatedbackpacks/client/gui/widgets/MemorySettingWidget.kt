@@ -17,6 +17,7 @@ class MemorySettingWidget(
     RSBTextures.BRAIN_ICON,
     "gui.memory_settings".asTranslationKey(),
     width = 75,
+    tabHeight = 48,
     expandDirection = ExpandDirection.RIGHT
 ) {
     companion object {
